@@ -1,20 +1,20 @@
 name: RTP
 version: 1.0.0
 main: net.voidflame.rtp.RTP
-api-version: '1.21.11'
-description: Configurable random teleport plugin for Paper.
+api-version: '26.2'
+description: Configurable random teleport plugin for Paper 26.2.
 author: VoidFlame
 commands:
   rtp:
-    description: Teleport to a random safe location.
-    usage: /rtp [reload]
+    description: Teleport randomly or manage RTP worlds.
+    usage: /rtp [gui|reload]
     aliases: [randomtp]
 permissions:
   rtp.use:
     description: Allows using /rtp.
     default: true
   rtp.admin:
-    description: Allows reloading RTP configuration.
+    description: Allows managing RTP worlds and reloading configuration.
     default: op
   rtp.bypasscooldown:
     description: Bypasses the RTP cooldown.
