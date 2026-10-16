@@ -41,6 +41,7 @@ public final class RTP extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        validateConfig();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("RTP enabled.");
     }
@@ -62,6 +63,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 return true;
             }
             reloadConfig();
+            validateConfig();
             sender.sendMessage(message("reloaded"));
             return true;
         }
@@ -180,6 +182,12 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void startTeleportSearch(Player player, World world) {
         if (!player.isOnline() || !searches.add(player.getUniqueId())) return;
+        int maxActiveSearches = Math.max(1, Math.min(500, getConfig().getInt("maximum-active-searches", 25)));
+        if (searches.size() > maxActiveSearches) {
+            searches.remove(player.getUniqueId());
+            sendRtpMessage(player, "busy");
+            return;
+        }
         sendRtpMessage(player, "searching");
 
         int minRadius = Math.max(0, getConfig().getInt("minimum-radius", 100));
@@ -425,6 +433,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 openWorldGui(player, 0);
             } else if (slot == 15) {
                 reloadConfig();
+                validateConfig();
                 player.sendMessage(message("reloaded"));
                 openMainGui(player);
             } else if (slot == 22) {
@@ -526,6 +535,61 @@ public final class RTP extends JavaPlugin implements Listener {
         }
         return getConfig().getBoolean("avoid-water", true)
                 && (material == Material.WATER || material == Material.BUBBLE_COLUMN);
+    }
+
+    private void validateConfig() {
+        int countdown = getConfig().getInt("countdown-seconds", 5);
+        if (countdown < 1 || countdown > 60) {
+            getLogger().warning("countdown-seconds must be between 1 and 60; using 5.");
+            getConfig().set("countdown-seconds", 5);
+        }
+
+        long cooldown = getConfig().getLong("cooldown-seconds", 30);
+        if (cooldown < 0 || cooldown > 86400) {
+            getLogger().warning("cooldown-seconds must be between 0 and 86400; using 30.");
+            getConfig().set("cooldown-seconds", 30);
+        }
+
+        int attempts = getConfig().getInt("maximum-attempts", 20);
+        if (attempts < 1 || attempts > 200) {
+            getLogger().warning("maximum-attempts must be between 1 and 200; using 20.");
+            getConfig().set("maximum-attempts", 20);
+        }
+
+        int minRadius = getConfig().getInt("minimum-radius", 100);
+        int maxRadius = getConfig().getInt("maximum-radius", 5000);
+        if (minRadius < 0 || minRadius > 30_000_000 || maxRadius <= minRadius || maxRadius > 30_000_000) {
+            getLogger().warning("Invalid RTP radius values; restoring minimum-radius=100 and maximum-radius=5000.");
+            getConfig().set("minimum-radius", 100);
+            getConfig().set("maximum-radius", 5000);
+        }
+
+        int maxSearches = getConfig().getInt("maximum-active-searches", 25);
+        if (maxSearches < 1 || maxSearches > 500) {
+            getLogger().warning("maximum-active-searches must be between 1 and 500; using 25.");
+            getConfig().set("maximum-active-searches", 25);
+        }
+
+        var areas = getConfig().getConfigurationSection("world-areas");
+        if (areas != null) {
+            for (String worldName : areas.getKeys(false)) {
+                String path = "world-areas." + worldName + ".";
+                if (!getConfig().contains(path + "min-x") || !getConfig().contains(path + "max-x")
+                        || !getConfig().contains(path + "min-z") || !getConfig().contains(path + "max-z")) {
+                    getLogger().warning("Incomplete world-areas entry for '" + worldName
+                            + "'. All four min/max X/Z values are required.");
+                    continue;
+                }
+                int minX = getConfig().getInt(path + "min-x");
+                int maxX = getConfig().getInt(path + "max-x");
+                int minZ = getConfig().getInt(path + "min-z");
+                int maxZ = getConfig().getInt(path + "max-z");
+                if (minX > maxX || minZ > maxZ) {
+                    getLogger().warning("Invalid min/max coordinates for world-areas entry '" + worldName + "'.");
+                }
+            }
+        }
+        saveConfig();
     }
 
     private String message(String key) {
