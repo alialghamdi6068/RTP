@@ -34,6 +34,8 @@ class RtpConfigTest {
         assertTrue(config.getInt("maximum-attempts") <= 200);
         assertTrue(config.getInt("maximum-active-searches") >= 1);
         assertTrue(config.getInt("maximum-active-searches") <= 500);
+        assertTrue(config.getInt("search-timeout-seconds") >= 5);
+        assertTrue(config.getInt("search-timeout-seconds") <= 120);
         assertFalse(config.getBoolean("load-chunks"), "Chunk generation should be opt-in by default");
     }
 
@@ -52,6 +54,7 @@ class RtpConfigTest {
         assertTrue(success.contains("%world%"));
 
         assertFalse(config.getString("messages.busy", "").isBlank());
+        assertFalse(config.getString("messages.timeout", "").isBlank());
         assertFalse(config.getString("messages.failed", "").isBlank());
     }
 
