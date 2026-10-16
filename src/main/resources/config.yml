@@ -99,20 +99,31 @@ avoid-water: true
 # Use & color codes. Keep placeholders exactly as written:
 # %time% %x% %y% %z% %world%
 messages:
+  # Shown before every chat message. Use & color codes.
+  prefix: "&8[&5&lRTP&8] &r"
+
+  # Errors and command feedback
   no-permission: "&cYou don't have permission to use this command."
-  cooldown: "&cWait &e%time%s &cbefore using RTP again."
-  already-counting: "&eRTP is already counting down. Stay still!"
-  countdown-start: "&eRTP begins in &6%time% seconds&e. Don't move!"
-  countdown-tick: "&eTeleporting in &6%time%&e..."
-  countdown-cancelled: "&cRTP cancelled because you moved."
-  searching: "&7Finding a safe random location..."
-  success: "&aTeleported to &e%x%, %y%, %z% &ain &e%world%&a."
-  failed: "&cCouldn't find a safe location. Please try again."
-  invalid-area: "&cThis world's RTP area has invalid min/max coordinates."
-  world-not-found: "&cThe configured RTP destination world could not be found."
-  world-not-allowed: "&cRTP cannot be started from this world."
+  usage: "&7Usage: &f/rtp &8[&fgui&8|&fworlds&8|&freload&8]"
+  players-only: "&cThis command can only be used by a player."
+  admin-gui-players-only: "&cThe admin menu can only be opened in-game."
+  cooldown: "&7Please wait &e&l%time%s &7before using RTP again."
+  already-counting: "&eYour RTP countdown is already running. Stay still."
+  world-not-found: "&cThe configured destination world could not be found."
+  world-not-allowed: "&cYou cannot start RTP from this world."
   world-disabled: "&cRTP is disabled in this world."
   destination-world-disabled: "&cRTP is disabled in the destination world."
-  world-enabled: "&aEnabled RTP in &e%world%&a."
-  world-disabled-admin: "&cDisabled RTP in &e%world%&c."
-  reloaded: "&aRTP configuration reloaded."
+  invalid-area: "&cThe RTP area for this world has invalid coordinates."
+
+  # Teleport countdown and result
+  countdown-start: "&7Random teleport starts in &d&l%time%s&7. &eDon't move!"
+  countdown-tick: "&7Teleporting in &d&l%time%&7..."
+  countdown-cancelled: "&cTeleport cancelled because you moved."
+  searching: "&7Searching for a safe location&8..."
+  success: "&aTeleport successful! &7Location: &f%x%&8, &f%y%&8, &f%z% &7in &d%world%&7."
+  failed: "&cCouldn't find a safe location. &7Please try again."
+
+  # Admin feedback
+  world-enabled: "&aRTP enabled for world &f%world%&a."
+  world-disabled-admin: "&cRTP disabled for world &f%world%&c."
+  reloaded: "&aConfiguration reloaded successfully."
