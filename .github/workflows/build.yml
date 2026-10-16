@@ -1,4 +1,4 @@
-name: Build RTP
+name: Build and Test RTP
 on:
   push:
     branches: [main]
@@ -18,8 +18,8 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Build with Maven
-        run: mvn --batch-mode --no-transfer-progress clean package
+      - name: Run tests and build with Maven
+        run: mvn --batch-mode --no-transfer-progress clean verify
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
