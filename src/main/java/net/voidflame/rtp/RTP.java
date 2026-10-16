@@ -406,43 +406,92 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openSettingsGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_SETTINGS_TITLE);
         fillGui(inventory);
-        inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRTP SETTINGS",
-                "&7Adjust common RTP limits directly here.",
-                "&8Changes are saved to config.yml immediately."));
+        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&d&lRTP SETTINGS",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Fine-tune RTP behavior and safety.",
+                "&7Changes save automatically to config.yml.",
+                "",
+                "&fClick a control below to adjust it."));
 
-        inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lDecrease Countdown", "&7Reduce countdown by 1 second."));
-        inventory.setItem(12, guiItem(Material.CLOCK, "&b&lCountdown",
-                "&7Current: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds", "&7Allowed range: &f1-60 seconds"));
-        inventory.setItem(14, guiItem(Material.LIME_DYE, "&a&lIncrease Countdown", "&7Increase countdown by 1 second."));
+        inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lDECREASE COUNTDOWN",
+                "&7Shorten the pre-teleport countdown.",
+                "&c−1 second per click"));
+        inventory.setItem(12, guiItem(Material.CLOCK, "&b&lCOUNTDOWN",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Current value: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds",
+                "&7Allowed range: &f1–60 seconds",
+                "&8Time before teleport begins."));
+        inventory.setItem(14, guiItem(Material.LIME_DYE, "&a&lINCREASE COUNTDOWN",
+                "&7Lengthen the pre-teleport countdown.",
+                "&a+1 second per click"));
 
-        inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lDecrease Cooldown", "&7Reduce cooldown by 5 seconds."));
-        inventory.setItem(21, guiItem(Material.CLOCK, "&b&lCooldown",
-                "&7Current: &f" + getConfig().getInt("cooldown-seconds", 30) + " seconds", "&7Allowed range: &f0-86400 seconds"));
-        inventory.setItem(23, guiItem(Material.LIME_DYE, "&a&lIncrease Cooldown", "&7Increase cooldown by 5 seconds."));
+        inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lDECREASE COOLDOWN",
+                "&7Reduce the wait between RTP uses.",
+                "&c−5 seconds per click"));
+        inventory.setItem(21, guiItem(Material.CLOCK, "&b&lCOOLDOWN",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Current value: &f" + getConfig().getInt("cooldown-seconds", 30) + " seconds",
+                "&7Allowed range: &f0–86400 seconds",
+                "&8Set to 0 to disable cooldown."));
+        inventory.setItem(23, guiItem(Material.LIME_DYE, "&a&lINCREASE COOLDOWN",
+                "&7Increase the wait between RTP uses.",
+                "&a+5 seconds per click"));
 
-        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFewer Attempts", "&7Reduce candidate attempts by 5."));
-        inventory.setItem(30, guiItem(Material.PAPER, "&b&lMaximum Attempts",
-                "&7Current: &f" + getConfig().getInt("maximum-attempts", 20), "&7Allowed range: &f1-200"));
-        inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMore Attempts", "&7Increase candidate attempts by 5."));
+        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFEWER ATTEMPTS",
+                "&7Try fewer candidate locations per request.",
+                "&c−5 attempts per click"));
+        inventory.setItem(30, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Current value: &f" + getConfig().getInt("maximum-attempts", 20),
+                "&7Allowed range: &f1–200 attempts",
+                "&8Maximum candidate locations per request."));
+        inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMORE ATTEMPTS",
+                "&7Try more candidate locations per request.",
+                "&a+5 attempts per click"));
 
-        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFewer Searches", "&7Reduce concurrent search limit by 5."));
-        inventory.setItem(39, guiItem(Material.BOOK, "&b&lConcurrent Searches",
-                "&7Current: &f" + getConfig().getInt("maximum-active-searches", 25), "&7Allowed range: &f1-500"));
-        inventory.setItem(41, guiItem(Material.LIME_DYE, "&a&lMore Searches", "&7Increase concurrent search limit by 5."));
+        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFEWER SEARCHES",
+                "&7Lower the number of searches allowed at once.",
+                "&c−5 searches per click"));
+        inventory.setItem(39, guiItem(Material.BOOK, "&b&lCONCURRENT SEARCHES",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Current value: &f" + getConfig().getInt("maximum-active-searches", 25),
+                "&7Allowed range: &f1–500 searches",
+                "&8Limits simultaneous RTP searches."));
+        inventory.setItem(41, guiItem(Material.LIME_DYE, "&a&lMORE SEARCHES",
+                "&7Allow more searches to run at once.",
+                "&a+5 searches per click"));
 
-        inventory.setItem(46, guiItem(Material.RED_DYE, "&c&lShorter Timeout", "&7Reduce search timeout by 5 seconds."));
-        inventory.setItem(48, guiItem(Material.CLOCK, "&b&lSearch Timeout",
-                "&7Current: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds", "&7Allowed range: &f5-120 seconds"));
-        inventory.setItem(50, guiItem(Material.LIME_DYE, "&a&lLonger Timeout", "&7Increase search timeout by 5 seconds."));
+        inventory.setItem(46, guiItem(Material.RED_DYE, "&c&lSHORTER TIMEOUT",
+                "&7Stop stalled searches sooner.",
+                "&c−5 seconds per click"));
+        inventory.setItem(48, guiItem(Material.CLOCK, "&b&lSEARCH TIMEOUT",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Current value: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds",
+                "&7Allowed range: &f5–120 seconds",
+                "&8Maximum time allowed for a search."));
+        inventory.setItem(50, guiItem(Material.LIME_DYE, "&a&lLONGER TIMEOUT",
+                "&7Allow searches more time to finish.",
+                "&a+5 seconds per click"));
         inventory.setItem(43, guiItem(getConfig().getBoolean("load-chunks", false) ? Material.LIME_DYE : Material.GRAY_DYE,
                 "&b&lChunk Loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
-                "&7Allow asynchronous loading/generation of destination chunks.",
-                "&eClick to toggle"));
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Permit asynchronous loading or generation",
+                "&7of destination chunks when required.",
+                getConfig().getBoolean("load-chunks", false) ? "&aCurrently ON" : "&cCurrently OFF",
+                "",
+                "&e▶ Click to toggle"));
         inventory.setItem(44, guiItem(getConfig().getBoolean("avoid-water", true) ? Material.LIME_DYE : Material.GRAY_DYE,
                 "&b&lAvoid Water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
-                "&7Reject water and bubble columns as unsafe destinations.",
-                "&eClick to toggle"));
-        inventory.setItem(52, guiItem(Material.OAK_DOOR, "&d&lBack", "&7Return to the RTP Control Center."));
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Reject water and bubble columns when",
+                "&7checking candidate destinations.",
+                getConfig().getBoolean("avoid-water", true) ? "&aCurrently ON" : "&cCurrently OFF",
+                "",
+                "&e▶ Click to toggle"));
+        inventory.setItem(52, guiItem(Material.OAK_DOOR, "&d&lBACK TO MENU",
+                "&7Return to the RTP Control Center.",
+                "",
+                "&d▶ Click to go back"));
         player.openInventory(inventory);
     }
 
@@ -528,8 +577,8 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void fillGui(Inventory inventory) {
-        ItemStack darkFiller = guiItem(Material.BLACK_STAINED_GLASS_PANE, "&0.");
-        ItemStack accentFiller = guiItem(Material.PURPLE_STAINED_GLASS_PANE, "&5.");
+        ItemStack darkFiller = guiItem(Material.BLACK_STAINED_GLASS_PANE, " ");
+        ItemStack accentFiller = guiItem(Material.PURPLE_STAINED_GLASS_PANE, " ");
         int size = inventory.getSize();
         int columns = 9;
         for (int slot = 0; slot < size; slot++) {
