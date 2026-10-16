@@ -112,11 +112,6 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("world-not-found"));
             return true;
         }
-        List<String> disabledWorlds = getConfig().getStringList("disabled-worlds");
-        if (disabledWorlds.contains(player.getWorld().getName())) {
-            player.sendMessage(message("world-disabled"));
-            return true;
-        }
         if (disabledWorlds.contains(world.getName())) {
             player.sendMessage(message("destination-world-disabled"));
             return true;
