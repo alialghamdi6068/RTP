@@ -89,6 +89,10 @@ maximum-attempts: 20
 # Requests above this limit are rejected instead of creating excessive load.
 maximum-active-searches: 25
 
+# Maximum time to search for a safe location (5-120 seconds).
+# Prevents stalled chunk loads from occupying a search slot indefinitely.
+search-timeout-seconds: 20
+
 # false = skip unloaded chunks to help prevent lag.
 # true  = allow loading/generating chunks; this may cause lag.
 load-chunks: false
@@ -127,6 +131,7 @@ messages:
   success: "&aTeleport successful! &7Location: &f%x%&8, &f%y%&8, &f%z% &7in &d%world%&7."
   failed: "&cCouldn't find a safe location. &7Please try again."
   busy: "&eRTP is busy right now. &7Please try again in a moment."
+  timeout: "&cRTP search took too long. &7Please try again in a moment."
 
   # Admin feedback
   world-enabled: "&aRTP enabled for world &f%world%&a."
