@@ -37,6 +37,7 @@ class RtpConfigTest {
         assertTrue(config.getInt("search-timeout-seconds") >= 5);
         assertTrue(config.getInt("search-timeout-seconds") <= 120);
         assertFalse(config.getBoolean("load-chunks"), "Chunk generation should be opt-in by default");
+        assertTrue(config.getBoolean("avoid-water"), "Water should be rejected by default");
     }
 
     @Test
