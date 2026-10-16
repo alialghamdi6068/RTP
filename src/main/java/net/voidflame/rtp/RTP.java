@@ -32,6 +32,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, Long> cooldowns = new HashMap<>();
     private final Map<UUID, BukkitTask> countdowns = new HashMap<>();
     private final java.util.Set<UUID> searches = new java.util.HashSet<>();
+    private final Map<UUID, BukkitTask> searchTimeouts = new HashMap<>();
     private final Random random = new Random();
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
@@ -48,7 +49,9 @@ public final class RTP extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         countdowns.values().forEach(BukkitTask::cancel);
+        searchTimeouts.values().forEach(BukkitTask::cancel);
         countdowns.clear();
+        searchTimeouts.clear();
         searches.clear();
     }
 
@@ -176,14 +179,19 @@ public final class RTP extends JavaPlugin implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
         if (task != null) task.cancel();
-        searches.remove(event.getPlayer().getUniqueId());
+        finishSearch(event.getPlayer().getUniqueId());
     }
 
     private void startTeleportSearch(Player player, World world) {
         if (!player.isOnline() || !searches.add(player.getUniqueId())) return;
+        UUID playerId = player.getUniqueId();
+        int timeoutSeconds = Math.max(5, Math.min(120, getConfig().getInt("search-timeout-seconds", 20)));
+        searchTimeouts.put(playerId, Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (finishSearch(playerId)) sendRtpMessage(player, "timeout");
+        }, timeoutSeconds * 20L));
         int maxActiveSearches = Math.max(1, Math.min(500, getConfig().getInt("maximum-active-searches", 25)));
         if (searches.size() > maxActiveSearches) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             sendRtpMessage(player, "busy");
             return;
         }
@@ -207,19 +215,19 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxZ = getConfig().getInt(areaPath + "max-z");
 
         if (areaConfigured && !customArea) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             sendRtpMessage(player, "invalid-area");
             getLogger().warning("Incomplete RTP area configured for world '" + world.getName() + "'.");
             return;
         }
         if (customArea && (minX > maxX || minZ > maxZ)) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             sendRtpMessage(player, "invalid-area");
             getLogger().warning("Invalid RTP area configured for world '" + world.getName() + "'.");
             return;
         }
         if (!customArea && (minRadius < 0 || maxRadius <= minRadius)) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             sendRtpMessage(player, "invalid-area");
             getLogger().warning("Invalid RTP radius configuration. Check minimum-radius and maximum-radius.");
             return;
@@ -245,11 +253,11 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index) {
         if (!player.isOnline() || !searches.contains(player.getUniqueId())) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             return;
         }
         if (index >= attempts) {
-            searches.remove(player.getUniqueId());
+            finishSearch(player.getUniqueId());
             sendRtpMessage(player, "failed");
             return;
         }
@@ -320,7 +328,7 @@ public final class RTP extends JavaPlugin implements Listener {
                     playerLocation.getYaw(), playerLocation.getPitch());
             player.teleportAsync(destination).whenComplete((success, error) ->
                     Bukkit.getScheduler().runTask(this, () -> {
-                        if (!searches.remove(player.getUniqueId()) || !player.isOnline()) return;
+                        if (!finishSearch(player.getUniqueId()) || !player.isOnline()) return;
                         if (error != null) {
                             getLogger().warning("RTP teleport failed for " + player.getName() + ": " + error.getMessage());
                             sendRtpMessage(player, "failed");
@@ -559,6 +567,13 @@ public final class RTP extends JavaPlugin implements Listener {
             }
         }
         saveConfig();
+    }
+
+    private boolean finishSearch(UUID playerId) {
+        boolean wasSearching = searches.remove(playerId);
+        BukkitTask timeout = searchTimeouts.remove(playerId);
+        if (timeout != null) timeout.cancel();
+        return wasSearching;
     }
 
     private String message(String key) {
