@@ -279,7 +279,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int chunkZ = z >> 4;
         if (!world.isChunkLoaded(chunkX, chunkZ)) {
             if (!getConfig().getBoolean("load-chunks", false)) {
-                searchCandidate(player, world, candidates, attempts, index + 1);
+                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
             // Paper async chunk loading avoids synchronously generating chunks on the main server thread.
@@ -290,14 +290,14 @@ public final class RTP extends JavaPlugin implements Listener {
                                     ? error.getCause() : error;
                             getLogger().fine("Could not load RTP chunk " + chunkX + "," + chunkZ + " in "
                                     + world.getName() + ": " + cause.getMessage());
-                            searchCandidate(player, world, candidates, attempts, index + 1);
+                            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                             return;
                         }
                         evaluateCandidate(player, world, x, z, candidates, attempts, index, searchToken);
                     }));
             return;
         }
-        evaluateCandidate(player, world, x, z, candidates, attempts, index);
+        evaluateCandidate(player, world, x, z, candidates, attempts, index, searchToken);
     }
 
     private void evaluateCandidate(Player player, World world, int x, int z,
@@ -310,13 +310,13 @@ public final class RTP extends JavaPlugin implements Listener {
         if (!isActiveSearch(playerId, searchToken)) return;
         try {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                searchCandidate(player, world, candidates, attempts, index + 1);
+                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
             Block ground = world.getHighestBlockAt(x, z);
             int groundY = ground.getY();
             if (groundY < world.getMinHeight() || groundY + 2 >= world.getMaxHeight()) {
-                searchCandidate(player, world, candidates, attempts, index + 1);
+                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
             Material groundType = ground.getType();
@@ -326,7 +326,7 @@ public final class RTP extends JavaPlugin implements Listener {
                     || !feet.isPassable() || !head.isPassable()
                     || isUnsafe(feet.getType()) || isUnsafe(head.getType())
                     || feet.isLiquid() || head.isLiquid()) {
-                searchCandidate(player, world, candidates, attempts, index + 1);
+                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
 
@@ -353,7 +353,7 @@ public final class RTP extends JavaPlugin implements Listener {
                     }));
         } catch (RuntimeException exception) {
             getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
-            searchCandidate(player, world, candidates, attempts, index + 1);
+            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
         }
     }
 
@@ -552,6 +552,12 @@ public final class RTP extends JavaPlugin implements Listener {
         if (maxSearches < 1 || maxSearches > 500) {
             getLogger().warning("maximum-active-searches must be between 1 and 500; using 25.");
             getConfig().set("maximum-active-searches", 25);
+        }
+
+        int searchTimeout = getConfig().getInt("search-timeout-seconds", 20);
+        if (searchTimeout < 5 || searchTimeout > 120) {
+            getLogger().warning("search-timeout-seconds must be between 5 and 120; using 20.");
+            getConfig().set("search-timeout-seconds", 20);
         }
 
         var areas = getConfig().getConfigurationSection("world-areas");
