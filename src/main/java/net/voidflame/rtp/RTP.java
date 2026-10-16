@@ -12,6 +12,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -26,6 +29,7 @@ import java.util.UUID;
 
 public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Map<UUID, BukkitTask> countdowns = new HashMap<>();
     private final Random random = new Random();
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
@@ -33,7 +37,13 @@ public final class RTP extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("RTP enabled for Paper 26.2.");
+        getLogger().info("RTP enabled.");
+    }
+
+    @Override
+    public void onDisable() {
+        countdowns.values().forEach(BukkitTask::cancel);
+        countdowns.clear();
     }
 
     @Override
@@ -82,7 +92,12 @@ public final class RTP extends JavaPlugin implements Listener {
             return true;
         }
 
-        long cooldownSeconds = Math.max(0, getConfig().getLong("cooldown-seconds", 60));
+        if (countdowns.containsKey(player.getUniqueId())) {
+            player.sendMessage(message("already-counting"));
+            return true;
+        }
+
+        long cooldownSeconds = Math.max(0, getConfig().getLong("cooldown-seconds", 30));
         long now = System.currentTimeMillis();
         long lastUse = cooldowns.getOrDefault(player.getUniqueId(), 0L);
         long remaining = cooldownSeconds - ((now - lastUse) / 1000L);
@@ -97,11 +112,15 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("world-not-found"));
             return true;
         }
+        List<String> disabledWorlds = getConfig().getStringList("disabled-worlds");
+        if (disabledWorlds.contains(player.getWorld().getName())) {
+            player.sendMessage(message("world-disabled"));
+            return true;
+        }
         if (disabledWorlds.contains(world.getName())) {
             player.sendMessage(message("destination-world-disabled"));
             return true;
         }
-
         List<String> allowedWorlds = getConfig().getStringList("allowed-worlds");
         if (!allowedWorlds.isEmpty() && !allowedWorlds.contains(player.getWorld().getName())) {
             player.sendMessage(message("world-not-allowed"));
@@ -109,26 +128,89 @@ public final class RTP extends JavaPlugin implements Listener {
         }
 
         if (!player.hasPermission("rtp.bypasscooldown")) cooldowns.put(player.getUniqueId(), now);
-        player.sendMessage(message("searching"));
+        startCountdown(player, world);
+        return true;
+    }
 
+    private void startCountdown(Player player, World world) {
+        UUID id = player.getUniqueId();
+        int seconds = Math.max(1, getConfig().getInt("countdown-seconds", 5));
+        Location start = player.getLocation().clone();
+        player.sendMessage(message("countdown-start").replace("%time%", String.valueOf(seconds)));
+        final int[] remaining = {seconds};
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            if (!player.isOnline() || !countdowns.containsKey(id)) {
+                BukkitTask active = countdowns.remove(id);
+                if (active != null) active.cancel();
+                return;
+            }
+            if (remaining[0] <= 0) {
+                BukkitTask active = countdowns.remove(id);
+                if (active != null) active.cancel();
+                startTeleportSearch(player, world);
+                return;
+            }
+            player.sendMessage(message("countdown-tick").replace("%time%", String.valueOf(remaining[0])));
+            remaining[0]--;
+        }, 0L, 20L);
+        countdowns.put(id, task);
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getWorld().equals(to.getWorld()) && from.getBlockX() == to.getBlockX()
+                && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) return;
+        BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
+        if (task != null) {
+            task.cancel();
+            event.getPlayer().sendMessage(message("countdown-cancelled"));
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
+        if (task != null) task.cancel();
+    }
+
+    private void startTeleportSearch(Player player, World world) {
+        if (!player.isOnline()) return;
+        player.sendMessage(message("searching"));
         int minRadius = Math.max(0, getConfig().getInt("minimum-radius", 100));
         int maxRadius = Math.max(minRadius + 1, getConfig().getInt("maximum-radius", 5000));
         int attempts = Math.max(1, getConfig().getInt("maximum-attempts", 20));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
-
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            int[] candidates = new int[attempts * 2];
-            for (int i = 0; i < attempts; i++) {
+        String areaPath = "world-areas." + world.getName() + ".";
+        boolean customArea = getConfig().contains(areaPath + "min-x")
+                && getConfig().contains(areaPath + "max-x")
+                && getConfig().contains(areaPath + "min-z")
+                && getConfig().contains(areaPath + "max-z");
+        int minX = getConfig().getInt(areaPath + "min-x");
+        int maxX = getConfig().getInt(areaPath + "max-x");
+        int minZ = getConfig().getInt(areaPath + "min-z");
+        int maxZ = getConfig().getInt(areaPath + "max-z");
+        if (customArea && (minX > maxX || minZ > maxZ)) {
+            player.sendMessage(message("invalid-area"));
+            return;
+        }
+        int[] candidates = new int[attempts * 2];
+        for (int i = 0; i < attempts; i++) {
+            if (customArea) {
+                candidates[i * 2] = minX + random.nextInt((int) Math.min(Integer.MAX_VALUE, (long) maxX - minX + 1));
+                candidates[i * 2 + 1] = minZ + random.nextInt((int) Math.min(Integer.MAX_VALUE, (long) maxZ - minZ + 1));
+            } else {
                 double angle = random.nextDouble() * Math.PI * 2.0;
                 double distance = minRadius + random.nextDouble() * (maxRadius - minRadius);
                 candidates[i * 2] = centerX + (int) Math.round(Math.cos(angle) * distance);
                 candidates[i * 2 + 1] = centerZ + (int) Math.round(Math.sin(angle) * distance);
             }
-            Bukkit.getScheduler().runTask(this, () -> findSafeLocation(player, world, candidates, attempts));
-        });
-        return true;
+        }
+        Bukkit.getScheduler().runTask(this, () -> findSafeLocation(player, world, candidates, attempts));
     }
 
     private void openWorldGui(Player player, int page) {
@@ -229,7 +311,7 @@ public final class RTP extends JavaPlugin implements Listener {
             int z = candidates[i * 2 + 1];
             try {
                 if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                    if (!getConfig().getBoolean("load-chunks", true)) continue;
+                    if (!getConfig().getBoolean("load-chunks", false)) continue;
                     world.getChunkAt(x >> 4, z >> 4);
                 }
                 Block ground = world.getHighestBlockAt(x, z);
