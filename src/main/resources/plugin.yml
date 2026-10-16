@@ -7,7 +7,7 @@ author: VoidFlame
 commands:
   rtp:
     description: Teleport randomly or manage RTP worlds.
-    usage: /rtp [gui|reload]
+    usage: /rtp [gui|worlds|reload]
     aliases: [randomtp]
 permissions:
   rtp.use:
