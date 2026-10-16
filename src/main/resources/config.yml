@@ -1,8 +1,12 @@
 # Leave empty to use the player's current world.
 world: ""
 
-# If empty, RTP can be used in any world.
+# If empty, RTP can be used in any source world not listed in disabled-worlds.
 allowed-worlds: []
+
+# Worlds where players cannot use RTP and which cannot be selected as destinations.
+# Manage these from /rtp gui or edit this list directly.
+disabled-worlds: []
 
 # Random teleport radius measured from the world's spawn point.
 minimum-radius: 100
@@ -28,4 +32,8 @@ messages:
   failed: "&cCouldn't find a safe location. Please try again."
   world-not-found: "&cThe configured RTP world could not be found."
   world-not-allowed: "&cRTP is disabled in your current world."
+  world-disabled: "&cRTP is disabled in your current world."
+  destination-world-disabled: "&cThe configured destination world has RTP disabled."
+  world-enabled: "&aEnabled RTP in &e%world%&a."
+  world-disabled-admin: "&cDisabled RTP in &e%world%&c."
   reloaded: "&aRTP configuration reloaded."
