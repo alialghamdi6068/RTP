@@ -66,6 +66,7 @@ Main settings in `plugins/RTP/config.yml`:
 | `cooldown-seconds` | `30` | Allowed range: 0–86400 seconds |
 | `maximum-attempts` | `20` | Allowed range: 1–200 candidate locations per request |
 | `maximum-active-searches` | `25` | Allowed range: 1–500 simultaneous searches |
+| `search-timeout-seconds` | `20` | Allowed range: 5–120 seconds before a stalled search is stopped |
 | `load-chunks` | `false` | If enabled, unloaded chunks may be generated asynchronously |
 | `avoid-water` | `true` | Reject water and bubble columns |
 
@@ -98,7 +99,8 @@ All player-facing messages are under `messages:`. Use `&` color codes and preser
 ## Performance and safety notes
 
 - Keep `load-chunks: false` for the lowest world-generation impact. If enabled, chunk generation can still create disk and CPU load even when performed asynchronously.
-- `maximum-attempts` and `maximum-active-searches` bound the amount of search work requested through the plugin.
+- `maximum-attempts`, `maximum-active-searches`, and `search-timeout-seconds` bound the amount and duration of search work requested through the plugin.
+- Each search has a unique request token so a delayed chunk callback from an expired request cannot interfere with a newer request by the same player.
 - RTP safety checks are best-effort. Server owners should still configure world borders, protected regions, and spawn protection appropriately.
 - This plugin does not provide network-level DDoS protection.
 
