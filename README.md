@@ -11,8 +11,8 @@ Build with JDK 25 using `mvn clean package`, then place `target/RTP.jar` in the 
 | Command | Description |
 | --- | --- |
 | `/rtp` | Start random teleport |
-| `/rtp gui` | Open world-management GUI (operators/admins) |
-| `/rtp worlds` | Alias for the world GUI |
+| `/rtp gui` | Open the RTP Control Center GUI (operators/admins) |
+| `/rtp worlds` | Open the world-management GUI directly |
 | `/rtp reload` | Reload configuration |
 | `/randomtp` | Alias for `/rtp` |
 
