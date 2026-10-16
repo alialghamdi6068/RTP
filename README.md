@@ -8,7 +8,7 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 - Configurable countdown and per-player cooldown.
 - Countdown cancellation when a player changes block; looking around does not cancel it.
 - Per-world rectangular X/Z areas, or a radius range around the destination world's spawn.
-- World allow/deny lists and an operator GUI for world management.
+- World allow/deny lists and operator GUIs for world management and live settings (countdown, cooldown, attempts, concurrent searches, and search timeout).
 - Safe destination checks for solid ground, two passable blocks, hazardous blocks, world height, and world border.
 - Unloaded chunks are skipped by default. When chunk loading is enabled, Paper's asynchronous chunk API is used instead of synchronously generating a chunk on the server thread.
 - Configurable cap on concurrent searches and a hard upper bound on candidate attempts.
