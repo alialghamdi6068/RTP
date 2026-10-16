@@ -1,69 +1,56 @@
 # RTP
 
-A configurable random-teleport plugin for **Paper 26.2**. Players use `/rtp` to teleport to a random safe location. Administrators can manage per-world availability through an in-game GUI.
-
-## Requirements
-
-- Paper 26.2
-- Java 25
-- Maven 3.9+ to build from source
+A configurable, lightweight random teleport plugin for Paper 26.2 and Java 25.
 
 ## Install
 
-1. Download `RTP.jar` from Releases when a release is published, or build it from source.
-2. Put `RTP.jar` in the server's `plugins` folder.
-3. Restart the server.
-4. Edit `plugins/RTP/config.yml` if needed.
-
-## Build from source
-
-Use JDK 25 and run:
-
-```bash
-mvn clean package
-```
-
-The output JAR is `target/RTP.jar`.
+Build with JDK 25 using `mvn clean package`, then place `target/RTP.jar` in the server's `plugins` folder and restart.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `/rtp` | Teleport to a random safe location |
-| `/rtp gui` | Open the world-management GUI |
-| `/rtp worlds` | Alias for the world-management GUI |
+| `/rtp` | Start random teleport |
+| `/rtp gui` | Open world-management GUI (operators/admins) |
+| `/rtp worlds` | Alias for the world GUI |
 | `/rtp reload` | Reload configuration |
 | `/randomtp` | Alias for `/rtp` |
-
-## World GUI
-
-Run `/rtp gui` with `rtp.admin`. Click a world to enable or disable RTP there. Green dye means enabled; red dye means disabled. The GUI saves changes to `plugins/RTP/config.yml` immediately and supports multiple pages.
-
-Disabling a world blocks RTP both when a player runs the command in that world and when it is configured as the destination world.
 
 ## Permissions
 
 | Permission | Default | Description |
 | --- | --- | --- |
-| `rtp.use` | Everyone | Use random teleport |
-| `rtp.admin` | Operators | Open world GUI and reload configuration |
+| `rtp.use` | Everyone | Use RTP |
+| `rtp.admin` | Operators | Manage world access and reload |
 | `rtp.bypasscooldown` | Operators | Bypass cooldown |
 
-## Configuration
+## Custom world area
 
-- `world: ""`: use the player's current world; otherwise use the named destination world.
-- `allowed-worlds: []`: when empty, players can run RTP from any world unless it is disabled.
-- `disabled-worlds: []`: worlds where RTP cannot be used or selected as the destination.
-- `minimum-radius` / `maximum-radius`: distance from the world's spawn point.
-- `maximum-attempts`: safe locations checked per request.
-- `load-chunks`: whether unloaded destination chunks may be loaded/generated. This can cause temporary lag.
-- `avoid-water`: reject water locations.
-- `cooldown-seconds`: default cooldown.
-- `messages`: configurable player messages.
+Configure rectangle bounds for each destination world in `plugins/RTP/config.yml`. Coordinates are block X/Z values; Y is detected from the surface.
 
-## Notes
+```yaml
+world-areas:
+  world:
+    min-x: -3000
+    max-x: 3000
+    min-z: -2000
+    max-z: 2000
+  world_nether:
+    min-x: -1000
+    max-x: 1000
+    min-z: -1000
+    max-z: 1000
+```
 
-The plugin checks for a solid floor, two passable blocks above it, and common unsafe blocks. RTP can fail if no safe location is found within the configured attempt limit. Test on a staging server before production deployment.
+A configured rectangle replaces the radius settings for that world. Otherwise, `minimum-radius` and `maximum-radius` define a ring around world spawn.
+
+## Behavior and performance
+
+- Five-second countdown by default. Moving to another block cancels the request; looking around does not.
+- Thirty-second cooldown per player, starting when the countdown begins.
+- Chunk loading/generation is disabled by default to avoid lag. The plugin skips unloaded chunks unless `load-chunks: true` is configured.
+- Safe-location checks reject unsafe ground and require two passable blocks above it.
+- `maximum-attempts` limits checks per request.
 
 ## License
 
