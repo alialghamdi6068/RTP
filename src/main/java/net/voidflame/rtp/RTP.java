@@ -487,50 +487,13 @@ public final class RTP extends JavaPlugin implements Listener {
         openWorldGui(player, page);
     }
 
-    private void findSafeLocation(Player player, World world, int[] candidates, int attempts) {
-        if (!player.isOnline()) return;
-        for (int i = 0; i < attempts; i++) {
-            int x = candidates[i * 2];
-            int z = candidates[i * 2 + 1];
-            try {
-                if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                    if (!getConfig().getBoolean("load-chunks", false)) continue;
-                    world.getChunkAt(x >> 4, z >> 4);
-                }
-                Block ground = world.getHighestBlockAt(x, z);
-                Material groundType = ground.getType();
-                if (!groundType.isSolid() || isUnsafe(groundType)) continue;
-                Block feet = ground.getRelative(0, 1, 0);
-                Block head = ground.getRelative(0, 2, 0);
-                if (!feet.isPassable() || !head.isPassable()) continue;
-                if (isUnsafe(feet.getType()) || isUnsafe(head.getType())) continue;
-
-                Location playerLocation = player.getLocation();
-                Location destination = new Location(world, x + 0.5, ground.getY() + 1.0, z + 0.5,
-                        playerLocation.getYaw(), playerLocation.getPitch());
-                player.teleportAsync(destination).thenAccept(success ->
-                        Bukkit.getScheduler().runTask(this, () -> {
-                            if (!player.isOnline()) return;
-                            player.sendMessage(message(success ? "success" : "failed")
-                                    .replace("%x%", String.valueOf(destination.getBlockX()))
-                                    .replace("%y%", String.valueOf(destination.getBlockY()))
-                                    .replace("%z%", String.valueOf(destination.getBlockZ()))
-                                    .replace("%world%", world.getName()));
-                        }));
-                return;
-            } catch (RuntimeException exception) {
-                getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
-            }
-        }
-        sendRtpMessage(player, "failed");
-    }
-
     private boolean isUnsafe(Material material) {
         if (material == Material.LAVA || material == Material.MAGMA_BLOCK || material == Material.CACTUS
                 || material == Material.FIRE || material == Material.SOUL_FIRE
                 || material == Material.CAMPFIRE || material == Material.SOUL_CAMPFIRE
                 || material == Material.POWDER_SNOW || material == Material.SWEET_BERRY_BUSH
-                || material == Material.WITHER_ROSE || material == Material.VOID_AIR\n                || material == Material.COBWEB || material == Material.POINTED_DRIPSTONE) {
+                || material == Material.WITHER_ROSE || material == Material.VOID_AIR
+                || material == Material.COBWEB || material == Material.POINTED_DRIPSTONE) {
             return true;
         }
         return getConfig().getBoolean("avoid-water", true)
