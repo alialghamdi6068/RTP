@@ -81,9 +81,13 @@ cooldown-seconds: 30
 # ------------------------------------------------------------
 # 6. PERFORMANCE & SAFE LOCATION CHECKS
 # ------------------------------------------------------------
-# Number of candidate locations checked per request.
+# Number of candidate locations checked per request (1-200).
 # Higher values may improve success rates but do more work.
 maximum-attempts: 20
+
+# Maximum number of simultaneous RTP searches on the server (1-500).
+# Requests above this limit are rejected instead of creating excessive load.
+maximum-active-searches: 25
 
 # false = skip unloaded chunks to help prevent lag.
 # true  = allow loading/generating chunks; this may cause lag.
@@ -122,6 +126,7 @@ messages:
   searching: "&7Searching for a safe location&8..."
   success: "&aTeleport successful! &7Location: &f%x%&8, &f%y%&8, &f%z% &7in &d%world%&7."
   failed: "&cCouldn't find a safe location. &7Please try again."
+  busy: "&eRTP is busy right now. &7Please try again in a moment."
 
   # Admin feedback
   world-enabled: "&aRTP enabled for world &f%world%&a."
