@@ -218,7 +218,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxZ = getConfig().getInt(areaPath + "max-z");
 
         if (areaConfigured && !customArea) {
-            finishSearch(player.getUniqueId());
+            finishSearch(playerId, searchToken);
             sendRtpMessage(player, "invalid-area");
             getLogger().warning("Incomplete RTP area configured for world '" + world.getName() + "'.");
             return;
