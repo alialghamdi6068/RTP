@@ -424,6 +424,14 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(48, guiItem(Material.CLOCK, "&b&lSearch Timeout",
                 "&7Current: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds", "&7Allowed range: &f5-120 seconds"));
         inventory.setItem(50, guiItem(Material.LIME_DYE, "&a&lLonger Timeout", "&7Increase search timeout by 5 seconds."));
+        inventory.setItem(43, guiItem(getConfig().getBoolean("load-chunks", false) ? Material.LIME_DYE : Material.GRAY_DYE,
+                "&b&lChunk Loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
+                "&7Allow asynchronous loading/generation of destination chunks.",
+                "&eClick to toggle"));
+        inventory.setItem(44, guiItem(getConfig().getBoolean("avoid-water", true) ? Material.LIME_DYE : Material.GRAY_DYE,
+                "&b&lAvoid Water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
+                "&7Reject water and bubble columns as unsafe destinations.",
+                "&eClick to toggle"));
         inventory.setItem(52, guiItem(Material.OAK_DOOR, "&d&lBack", "&7Return to the RTP Control Center."));
         player.openInventory(inventory);
     }
@@ -553,8 +561,19 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             int settingsSlot = event.getRawSlot();
             if (settingsSlot < 0 || settingsSlot >= event.getView().getTopInventory().getSize()) return;
-            if (settingsSlot == 52) openMainGui(player);
-            else adjustSetting(player, settingsSlot);
+            if (settingsSlot == 52) {
+                openMainGui(player);
+            } else if (settingsSlot == 43) {
+                getConfig().set("load-chunks", !getConfig().getBoolean("load-chunks", false));
+                saveConfig();
+                openSettingsGui(player);
+            } else if (settingsSlot == 44) {
+                getConfig().set("avoid-water", !getConfig().getBoolean("avoid-water", true));
+                saveConfig();
+                openSettingsGui(player);
+            } else {
+                adjustSetting(player, settingsSlot);
+            }
             return;
         }
         if (!title.startsWith(GUI_PREFIX)) return;
