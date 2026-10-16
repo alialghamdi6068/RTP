@@ -64,7 +64,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
         if (args.length == 1 && (args[0].equalsIgnoreCase("gui") || args[0].equalsIgnoreCase("worlds"))) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage(color("&cOnly players can open the RTP admin GUI."));
+                sender.sendMessage(message("admin-gui-players-only"));
                 return true;
             }
             if (!player.hasPermission("rtp.admin")) {
@@ -77,11 +77,11 @@ public final class RTP extends JavaPlugin implements Listener {
         }
 
         if (args.length != 0) {
-            sender.sendMessage(color("&cUsage: /rtp [gui|reload]"));
+            sender.sendMessage(message("usage"));
             return true;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(color("&cOnly players can use this command."));
+            sender.sendMessage(message("players-only"));
             return true;
         }
         if (!player.hasPermission("rtp.use")) {
@@ -411,7 +411,9 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private String message(String key) {
-        return color(getConfig().getString("messages." + key, "&cMessage not configured: " + key));
+        String prefix = getConfig().getString("messages.prefix", "&8[&5&lRTP&8] &r");
+        String text = getConfig().getString("messages." + key, "&cMessage not configured: " + key);
+        return color(prefix + text);
     }
 
     private String color(String text) {
