@@ -1,21 +1,23 @@
 # RTP
 
-A lightweight, configurable random-teleport plugin for Paper servers. Players can use `/rtp` to teleport to a random safe location within a configured radius.
+A configurable random-teleport plugin for **Paper 26.2**. Players use `/rtp` to teleport to a random safe location. Administrators can manage per-world availability through an in-game GUI.
 
 ## Requirements
 
-- Paper 1.21.11
-- Java 21 or newer
+- Paper 26.2
+- Java 25
 - Maven 3.9+ to build from source
 
 ## Install
 
-1. Download the compiled `RTP.jar` from the repository's Releases page when a release is published, or build it from source.
-2. Put `RTP.jar` in your server's `plugins` folder.
+1. Download `RTP.jar` from Releases when a release is published, or build it from source.
+2. Put `RTP.jar` in the server's `plugins` folder.
 3. Restart the server.
-4. Edit `plugins/RTP/config.yml` if needed, then run `/rtp reload`.
+4. Edit `plugins/RTP/config.yml` if needed.
 
 ## Build from source
+
+Use JDK 25 and run:
 
 ```bash
 mvn clean package
@@ -28,31 +30,40 @@ The output JAR is `target/RTP.jar`.
 | Command | Description |
 | --- | --- |
 | `/rtp` | Teleport to a random safe location |
-| `/rtp reload` | Reload configuration (admin permission) |
+| `/rtp gui` | Open the world-management GUI |
+| `/rtp worlds` | Alias for the world-management GUI |
+| `/rtp reload` | Reload configuration |
 | `/randomtp` | Alias for `/rtp` |
+
+## World GUI
+
+Run `/rtp gui` with `rtp.admin`. Click a world to enable or disable RTP there. Green dye means enabled; red dye means disabled. The GUI saves changes to `plugins/RTP/config.yml` immediately and supports multiple pages.
+
+Disabling a world blocks RTP both when a player runs the command in that world and when it is configured as the destination world.
 
 ## Permissions
 
 | Permission | Default | Description |
 | --- | --- | --- |
 | `rtp.use` | Everyone | Use random teleport |
-| `rtp.admin` | Operators | Reload configuration |
+| `rtp.admin` | Operators | Open world GUI and reload configuration |
 | `rtp.bypasscooldown` | Operators | Bypass cooldown |
 
 ## Configuration
 
-The generated `config.yml` includes the world, allowed worlds, minimum and maximum radius, number of attempts, chunk-loading behavior, water avoidance, cooldown, and all player-facing messages.
-
-- Leave `world: ""` to use the player's current world.
-- Leave `allowed-worlds: []` to allow RTP in any world.
-- `maximum-radius` and `minimum-radius` are measured from the world's X/Z origin.
-- `load-chunks` is disabled by default to avoid unexpectedly generating/loading many chunks. If RTP often cannot find a location in unexplored areas, enable it, noting that chunk generation can cause server lag.
+- `world: ""`: use the player's current world; otherwise use the named destination world.
+- `allowed-worlds: []`: when empty, players can run RTP from any world unless it is disabled.
+- `disabled-worlds: []`: worlds where RTP cannot be used or selected as the destination.
+- `minimum-radius` / `maximum-radius`: distance from the world's spawn point.
+- `maximum-attempts`: safe locations checked per request.
+- `load-chunks`: whether unloaded destination chunks may be loaded/generated. This can cause temporary lag.
+- `avoid-water`: reject water locations.
+- `cooldown-seconds`: default cooldown.
+- `messages`: configurable player messages.
 
 ## Notes
 
-- The plugin checks for a solid floor, two passable blocks above it, and common unsafe blocks.
-- RTP may fail if no safe location is found within the configured attempt limit.
-- Test on a staging server before deploying to a busy production server.
+The plugin checks for a solid floor, two passable blocks above it, and common unsafe blocks. RTP can fail if no safe location is found within the configured attempt limit. Test on a staging server before production deployment.
 
 ## License
 
