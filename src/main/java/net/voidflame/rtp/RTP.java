@@ -175,7 +175,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void startTeleportSearch(Player player, World world) {
         if (!player.isOnline()) return;
-        player.sendMessage(message("searching"));
+        sendRtpMessage(player, "searching");
         int minRadius = Math.max(0, getConfig().getInt("minimum-radius", 100));
         int maxRadius = Math.max(minRadius + 1, getConfig().getInt("maximum-radius", 5000));
         int attempts = Math.max(1, getConfig().getInt("maximum-attempts", 20));
@@ -395,7 +395,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
             }
         }
-        player.sendMessage(message("failed"));
+        sendRtpMessage(player, "failed");
     }
 
     private boolean isUnsafe(Material material) {
@@ -414,6 +414,10 @@ public final class RTP extends JavaPlugin implements Listener {
         String prefix = getConfig().getString("messages.prefix", "&8[&5&lRTP&8] &r");
         String text = getConfig().getString("messages." + key, "&cMessage not configured: " + key);
         return color(prefix + text);
+    }
+
+    private void sendRtpMessage(Player player, String key) {
+        if (player != null && player.isOnline()) player.sendMessage(message(key));
     }
 
     private String color(String text) {
