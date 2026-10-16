@@ -170,18 +170,26 @@ public final class RTP extends JavaPlugin implements Listener {
         Location to = event.getTo();
         if (from.getWorld().equals(to.getWorld()) && from.getBlockX() == to.getBlockX()
                 && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) return;
-        BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
+        UUID playerId = event.getPlayer().getUniqueId();
+        BukkitTask task = countdowns.remove(playerId);
         if (task != null) {
             task.cancel();
+            // A cancelled countdown did not perform a teleport, so do not charge the cooldown.
+            cooldowns.remove(playerId);
             event.getPlayer().sendMessage(message("countdown-cancelled"));
         }
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
-        if (task != null) task.cancel();
-        finishSearch(event.getPlayer().getUniqueId());
+        UUID playerId = event.getPlayer().getUniqueId();
+        BukkitTask task = countdowns.remove(playerId);
+        if (task != null) {
+            task.cancel();
+            // Disconnecting during the countdown cancels the request, so refund its cooldown.
+            cooldowns.remove(playerId);
+        }
+        finishSearch(playerId);
     }
 
     private void startTeleportSearch(Player player, World world) {
