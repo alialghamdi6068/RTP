@@ -135,7 +135,6 @@ public final class RTP extends JavaPlugin implements Listener {
     private void startCountdown(Player player, World world) {
         UUID id = player.getUniqueId();
         int seconds = Math.max(1, getConfig().getInt("countdown-seconds", 5));
-        Location start = player.getLocation().clone();
         player.sendMessage(message("countdown-start").replace("%time%", String.valueOf(seconds)));
         final int[] remaining = {seconds};
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(this, () -> {
@@ -144,15 +143,15 @@ public final class RTP extends JavaPlugin implements Listener {
                 if (active != null) active.cancel();
                 return;
             }
-            if (remaining[0] <= 0) {
+            if (remaining[0] <= 1) {
                 BukkitTask active = countdowns.remove(id);
                 if (active != null) active.cancel();
                 startTeleportSearch(player, world);
                 return;
             }
-            player.sendMessage(message("countdown-tick").replace("%time%", String.valueOf(remaining[0])));
             remaining[0]--;
-        }, 0L, 20L);
+            player.sendMessage(message("countdown-tick").replace("%time%", String.valueOf(remaining[0])));
+        }, 20L, 20L);
         countdowns.put(id, task);
     }
 
