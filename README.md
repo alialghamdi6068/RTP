@@ -6,9 +6,9 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 
 - Player-only, private RTP feedback with configurable color-coded messages.
 - Configurable countdown and per-player cooldown.
-- Countdown cancellation when a player changes block; looking around does not cancel it.
+- Countdown cancellation when a player changes block; looking around does not cancel it. Cancelled countdowns refund the cooldown.
 - Per-world rectangular X/Z areas, or a radius range around the destination world's spawn.
-- World allow/deny lists and operator GUIs for world management and live settings (countdown, cooldown, attempts, concurrent searches, and search timeout).
+- World allow/deny lists and operator GUIs for world management and live settings (countdown, cooldown, attempts, concurrent searches, search timeout, chunk loading, and water avoidance).
 - Safe destination checks for solid ground, two passable blocks, hazardous blocks, world height, and world border.
 - Unloaded chunks are skipped by default. When chunk loading is enabled, Paper's asynchronous chunk API is used instead of synchronously generating a chunk on the server thread.
 - Configurable cap on concurrent searches and a hard upper bound on candidate attempts.
@@ -106,7 +106,7 @@ All player-facing messages are under `messages:`. Use `&` color codes and preser
 
 ## Tests and CI
 
-The Maven test suite validates the default configuration, required message placeholders, and custom-area configuration behavior. GitHub Actions runs `mvn clean package` on pushes and pull requests to `main`, then uploads the plugin JAR as an artifact.
+The Maven test suite validates the default configuration, required message placeholders, and custom-area configuration behavior. GitHub Actions runs `mvn --batch-mode --no-transfer-progress clean verify` on pushes and pull requests to `main`, then uploads the plugin JAR as an artifact when verification succeeds.
 
 A successful compilation and the automated tests do not replace an in-game Paper 26.2 smoke test before production deployment.
 
