@@ -37,6 +37,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Random random = new Random();
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
+    private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
     @Override
@@ -374,7 +375,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Attempts: &f" + getConfig().getInt("maximum-attempts", 20),
                 "&7Chunk loading: " + (getConfig().getBoolean("load-chunks", false) ? "&eEnabled" : "&aDisabled"),
                 "",
-                "&8Edit detailed values in config.yml"));
+                "&eClick to edit settings"));
         inventory.setItem(15, guiItem(Material.WRITABLE_BOOK, "&e&lReload Configuration",
                 "&7Reload config.yml from disk.",
                 "&cUnsaved GUI changes are not applicable.",
@@ -382,6 +383,78 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&eClick to reload"));
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lClose"));
         player.openInventory(inventory);
+    }
+
+    private void openSettingsGui(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_SETTINGS_TITLE);
+        fillGui(inventory);
+        inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRTP SETTINGS",
+                "&7Adjust common RTP limits directly here.",
+                "&8Changes are saved to config.yml immediately."));
+
+        inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lDecrease Countdown", "&7Reduce countdown by 1 second."));
+        inventory.setItem(12, guiItem(Material.CLOCK, "&b&lCountdown",
+                "&7Current: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds", "&7Allowed range: &f1-60 seconds"));
+        inventory.setItem(14, guiItem(Material.LIME_DYE, "&a&lIncrease Countdown", "&7Increase countdown by 1 second."));
+
+        inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lDecrease Cooldown", "&7Reduce cooldown by 5 seconds."));
+        inventory.setItem(21, guiItem(Material.CLOCK, "&b&lCooldown",
+                "&7Current: &f" + getConfig().getInt("cooldown-seconds", 30) + " seconds", "&7Allowed range: &f0-86400 seconds"));
+        inventory.setItem(23, guiItem(Material.LIME_DYE, "&a&lIncrease Cooldown", "&7Increase cooldown by 5 seconds."));
+
+        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFewer Attempts", "&7Reduce candidate attempts by 5."));
+        inventory.setItem(30, guiItem(Material.PAPER, "&b&lMaximum Attempts",
+                "&7Current: &f" + getConfig().getInt("maximum-attempts", 20), "&7Allowed range: &f1-200"));
+        inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMore Attempts", "&7Increase candidate attempts by 5."));
+
+        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFewer Searches", "&7Reduce concurrent search limit by 5."));
+        inventory.setItem(39, guiItem(Material.BOOK, "&b&lConcurrent Searches",
+                "&7Current: &f" + getConfig().getInt("maximum-active-searches", 25), "&7Allowed range: &f1-500"));
+        inventory.setItem(41, guiItem(Material.LIME_DYE, "&a&lMore Searches", "&7Increase concurrent search limit by 5."));
+
+        inventory.setItem(46, guiItem(Material.RED_DYE, "&c&lShorter Timeout", "&7Reduce search timeout by 5 seconds."));
+        inventory.setItem(48, guiItem(Material.CLOCK, "&b&lSearch Timeout",
+                "&7Current: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds", "&7Allowed range: &f5-120 seconds"));
+        inventory.setItem(50, guiItem(Material.LIME_DYE, "&a&lLonger Timeout", "&7Increase search timeout by 5 seconds."));
+        inventory.setItem(52, guiItem(Material.OAK_DOOR, "&d&lBack", "&7Return to the RTP Control Center."));
+        player.openInventory(inventory);
+    }
+
+    private void adjustSetting(Player player, int slot) {
+        String path = null;
+        int delta = 0;
+        switch (slot) {
+            case 10 -> { path = "countdown-seconds"; delta = -1; }
+            case 14 -> { path = "countdown-seconds"; delta = 1; }
+            case 19 -> { path = "cooldown-seconds"; delta = -5; }
+            case 23 -> { path = "cooldown-seconds"; delta = 5; }
+            case 28 -> { path = "maximum-attempts"; delta = -5; }
+            case 32 -> { path = "maximum-attempts"; delta = 5; }
+            case 37 -> { path = "maximum-active-searches"; delta = -5; }
+            case 41 -> { path = "maximum-active-searches"; delta = 5; }
+            case 46 -> { path = "search-timeout-seconds"; delta = -5; }
+            case 50 -> { path = "search-timeout-seconds"; delta = 5; }
+            default -> { return; }
+        }
+        int value = getConfig().getInt(path);
+        int min = switch (path) {
+            case "countdown-seconds" -> 1;
+            case "cooldown-seconds" -> 0;
+            case "maximum-attempts", "maximum-active-searches" -> 1;
+            case "search-timeout-seconds" -> 5;
+            default -> 0;
+        };
+        int max = switch (path) {
+            case "countdown-seconds" -> 60;
+            case "cooldown-seconds" -> 86400;
+            case "maximum-attempts" -> 200;
+            case "maximum-active-searches" -> 500;
+            case "search-timeout-seconds" -> 120;
+            default -> 0;
+        };
+        getConfig().set(path, Math.max(min, Math.min(max, value + delta)));
+        saveConfig();
+        openSettingsGui(player);
     }
 
     private void openWorldGui(Player player, int page) {
@@ -452,6 +525,8 @@ public final class RTP extends JavaPlugin implements Listener {
             if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
             if (slot == 11) {
                 openWorldGui(player, 0);
+            } else if (slot == 13) {
+                openSettingsGui(player);
             } else if (slot == 15) {
                 reloadConfig();
                 validateConfig();
@@ -460,6 +535,18 @@ public final class RTP extends JavaPlugin implements Listener {
             } else if (slot == 22) {
                 player.closeInventory();
             }
+            return;
+        }
+        if (title.equals(GUI_SETTINGS_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) {
+                player.closeInventory();
+                return;
+            }
+            int settingsSlot = event.getRawSlot();
+            if (settingsSlot < 0 || settingsSlot >= event.getView().getTopInventory().getSize()) return;
+            if (settingsSlot == 52) openMainGui(player);
+            else adjustSetting(player, settingsSlot);
             return;
         }
         if (!title.startsWith(GUI_PREFIX)) return;
