@@ -5,31 +5,47 @@ world: ""
 allowed-worlds: []
 
 # Worlds where players cannot use RTP and which cannot be selected as destinations.
-# Manage these from /rtp gui or edit this list directly.
 disabled-worlds: []
 
-# Random teleport radius measured from the world's spawn point.
+# Optional rectangular RTP bounds per destination world (block X/Z coordinates).
+# When a world is listed here, its rectangle replaces the radius settings.
+# Example:
+# world-areas:
+#   world:
+#     min-x: -3000
+#     max-x: 3000
+#     min-z: -2000
+#     max-z: 2000
+world-areas: {}
+
+# Fallback for worlds without custom world-areas; measured from world spawn.
 minimum-radius: 100
 maximum-radius: 5000
 
-# How many candidate locations are checked before failing.
+# Maximum safe-location candidates checked per request.
 maximum-attempts: 20
 
-# Load candidate chunks when needed. Chunk generation can cause temporary lag.
-load-chunks: true
-
-# Avoid water and unsafe blocks.
+# Disabled by default to avoid chunk generation lag. Enable only if desired.
+load-chunks: false
 avoid-water: true
 
-# Cooldown applied after a teleport attempt.
-cooldown-seconds: 60
+# Countdown before teleport. Moving to another block cancels it.
+countdown-seconds: 5
+
+# Cooldown per player, measured from the start of the countdown.
+cooldown-seconds: 30
 
 messages:
   no-permission: "&cYou don't have permission to use this command."
   cooldown: "&cYou must wait &e%time% seconds &cbefore using RTP again."
+  already-counting: "&eRTP is already counting down. Don't move!"
+  countdown-start: "&eRTP starts in &6%time% seconds&e. Don't move!"
+  countdown-tick: "&eTeleporting in &6%time%&e..."
+  countdown-cancelled: "&cRTP cancelled because you moved."
   searching: "&7Finding a safe random location..."
   success: "&aTeleported to &e%x%, %y%, %z% &ain world &e%world%&a."
   failed: "&cCouldn't find a safe location. Please try again."
+  invalid-area: "&cThe configured RTP area has invalid min/max coordinates."
   world-not-found: "&cThe configured RTP world could not be found."
   world-not-allowed: "&cRTP is disabled in your current world."
   world-disabled: "&cRTP is disabled in your current world."
