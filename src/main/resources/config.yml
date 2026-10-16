@@ -1,0 +1,31 @@
+# Leave empty to use the player's current world.
+world: ""
+
+# If empty, RTP can be used in any world.
+allowed-worlds: []
+
+# Random teleport radius measured from world spawn (0, 0).
+minimum-radius: 100
+maximum-radius: 5000
+
+# How many candidate locations are checked before failing.
+maximum-attempts: 20
+
+# Chunk loading can create lag. Keep disabled unless you understand the impact.
+load-chunks: false
+
+# Avoid water and unsafe blocks.
+avoid-water: true
+
+# Cooldown applied after a teleport attempt.
+cooldown-seconds: 60
+
+messages:
+  no-permission: "&cYou don't have permission to use this command."
+  cooldown: "&cYou must wait &e%time% seconds &cbefore using RTP again."
+  searching: "&7Finding a safe random location..."
+  success: "&aTeleported to &e%x%, %y%, %z% &ain world &e%world%&a."
+  failed: "&cCouldn't find a safe location. Please try again."
+  world-not-found: "&cThe configured RTP world could not be found."
+  world-not-allowed: "&cRTP is disabled in your current world."
+  reloaded: "&aRTP configuration reloaded."
