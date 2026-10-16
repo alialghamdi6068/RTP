@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.CompletionException;
 
 public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, Long> cooldowns = new HashMap<>();
     private final Map<UUID, BukkitTask> countdowns = new HashMap<>();
+    private final java.util.Set<UUID> searches = new java.util.HashSet<>();
     private final Random random = new Random();
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
@@ -46,6 +49,7 @@ public final class RTP extends JavaPlugin implements Listener {
     public void onDisable() {
         countdowns.values().forEach(BukkitTask::cancel);
         countdowns.clear();
+        searches.clear();
     }
 
     @Override
@@ -171,14 +175,16 @@ public final class RTP extends JavaPlugin implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         BukkitTask task = countdowns.remove(event.getPlayer().getUniqueId());
         if (task != null) task.cancel();
+        searches.remove(event.getPlayer().getUniqueId());
     }
 
     private void startTeleportSearch(Player player, World world) {
-        if (!player.isOnline()) return;
+        if (!player.isOnline() || !searches.add(player.getUniqueId())) return;
         sendRtpMessage(player, "searching");
+
         int minRadius = Math.max(0, getConfig().getInt("minimum-radius", 100));
         int maxRadius = Math.max(minRadius + 1, getConfig().getInt("maximum-radius", 5000));
-        int attempts = Math.max(1, getConfig().getInt("maximum-attempts", 20));
+        int attempts = Math.max(1, Math.min(200, getConfig().getInt("maximum-attempts", 20)));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
@@ -191,23 +197,135 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxX = getConfig().getInt(areaPath + "max-x");
         int minZ = getConfig().getInt(areaPath + "min-z");
         int maxZ = getConfig().getInt(areaPath + "max-z");
+
         if (customArea && (minX > maxX || minZ > maxZ)) {
-            player.sendMessage(message("invalid-area"));
+            searches.remove(player.getUniqueId());
+            sendRtpMessage(player, "invalid-area");
+            getLogger().warning("Invalid RTP area configured for world '" + world.getName() + "'.");
             return;
         }
+        if (!customArea && (minRadius < 0 || maxRadius <= minRadius)) {
+            searches.remove(player.getUniqueId());
+            sendRtpMessage(player, "invalid-area");
+            getLogger().warning("Invalid RTP radius configuration. Check minimum-radius and maximum-radius.");
+            return;
+        }
+
         int[] candidates = new int[attempts * 2];
         for (int i = 0; i < attempts; i++) {
             if (customArea) {
-                candidates[i * 2] = minX + random.nextInt((int) Math.min(Integer.MAX_VALUE, (long) maxX - minX + 1));
-                candidates[i * 2 + 1] = minZ + random.nextInt((int) Math.min(Integer.MAX_VALUE, (long) maxZ - minZ + 1));
+                candidates[i * 2] = (int) random.nextLong((long) minX, (long) maxX + 1L);
+                candidates[i * 2 + 1] = (int) random.nextLong((long) minZ, (long) maxZ + 1L);
             } else {
                 double angle = random.nextDouble() * Math.PI * 2.0;
-                double distance = minRadius + random.nextDouble() * (maxRadius - minRadius);
+                // Square-root sampling distributes destinations more evenly across the ring's area.
+                double minSquared = (double) minRadius * minRadius;
+                double maxSquared = (double) maxRadius * maxRadius;
+                double distance = Math.sqrt(minSquared + random.nextDouble() * (maxSquared - minSquared));
                 candidates[i * 2] = centerX + (int) Math.round(Math.cos(angle) * distance);
                 candidates[i * 2 + 1] = centerZ + (int) Math.round(Math.sin(angle) * distance);
             }
         }
-        Bukkit.getScheduler().runTask(this, () -> findSafeLocation(player, world, candidates, attempts));
+        searchCandidate(player, world, candidates, attempts, 0);
+    }
+
+    private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index) {
+        if (!player.isOnline() || !searches.contains(player.getUniqueId())) {
+            searches.remove(player.getUniqueId());
+            return;
+        }
+        if (index >= attempts) {
+            searches.remove(player.getUniqueId());
+            sendRtpMessage(player, "failed");
+            return;
+        }
+
+        int x = candidates[index * 2];
+        int z = candidates[index * 2 + 1];
+        Location borderCheck = new Location(world, x + 0.5, world.getMinHeight(), z + 0.5);
+        if (!world.getWorldBorder().isInside(borderCheck)) {
+            searchCandidate(player, world, candidates, attempts, index + 1);
+            return;
+        }
+
+        int chunkX = x >> 4;
+        int chunkZ = z >> 4;
+        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+            if (!getConfig().getBoolean("load-chunks", false)) {
+                searchCandidate(player, world, candidates, attempts, index + 1);
+                return;
+            }
+            // Paper async chunk loading avoids synchronously generating chunks on the main server thread.
+            world.getChunkAtAsync(chunkX, chunkZ, true).whenComplete((chunk, error) ->
+                    Bukkit.getScheduler().runTask(this, () -> {
+                        if (error != null) {
+                            Throwable cause = error instanceof CompletionException && error.getCause() != null
+                                    ? error.getCause() : error;
+                            getLogger().fine("Could not load RTP chunk " + chunkX + "," + chunkZ + " in "
+                                    + world.getName() + ": " + cause.getMessage());
+                            searchCandidate(player, world, candidates, attempts, index + 1);
+                            return;
+                        }
+                        evaluateCandidate(player, world, x, z, candidates, attempts, index);
+                    }));
+            return;
+        }
+        evaluateCandidate(player, world, x, z, candidates, attempts, index);
+    }
+
+    private void evaluateCandidate(Player player, World world, int x, int z,
+                                   int[] candidates, int attempts, int index) {
+        if (!player.isOnline() || !searches.contains(player.getUniqueId())) {
+            searches.remove(player.getUniqueId());
+            return;
+        }
+        try {
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                searchCandidate(player, world, candidates, attempts, index + 1);
+                return;
+            }
+            Block ground = world.getHighestBlockAt(x, z);
+            int groundY = ground.getY();
+            if (groundY < world.getMinHeight() || groundY + 2 >= world.getMaxHeight()) {
+                searchCandidate(player, world, candidates, attempts, index + 1);
+                return;
+            }
+            Material groundType = ground.getType();
+            Block feet = ground.getRelative(0, 1, 0);
+            Block head = ground.getRelative(0, 2, 0);
+            if (!groundType.isSolid() || isUnsafe(groundType)
+                    || !feet.isPassable() || !head.isPassable()
+                    || isUnsafe(feet.getType()) || isUnsafe(head.getType())
+                    || feet.isLiquid() || head.isLiquid()) {
+                searchCandidate(player, world, candidates, attempts, index + 1);
+                return;
+            }
+
+            Location playerLocation = player.getLocation();
+            Location destination = new Location(world, x + 0.5, groundY + 1.0, z + 0.5,
+                    playerLocation.getYaw(), playerLocation.getPitch());
+            player.teleportAsync(destination).whenComplete((success, error) ->
+                    Bukkit.getScheduler().runTask(this, () -> {
+                        if (!searches.remove(player.getUniqueId()) || !player.isOnline()) return;
+                        if (error != null) {
+                            getLogger().warning("RTP teleport failed for " + player.getName() + ": " + error.getMessage());
+                            sendRtpMessage(player, "failed");
+                            return;
+                        }
+                        if (!Boolean.TRUE.equals(success)) {
+                            sendRtpMessage(player, "failed");
+                            return;
+                        }
+                        player.sendMessage(message("success")
+                                .replace("%x%", String.valueOf(destination.getBlockX()))
+                                .replace("%y%", String.valueOf(destination.getBlockY()))
+                                .replace("%z%", String.valueOf(destination.getBlockZ()))
+                                .replace("%world%", world.getName()));
+                    }));
+        } catch (RuntimeException exception) {
+            getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
+            searchCandidate(player, world, candidates, attempts, index + 1);
+        }
     }
 
     private void openMainGui(Player player) {
@@ -403,7 +521,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 || material == Material.FIRE || material == Material.SOUL_FIRE
                 || material == Material.CAMPFIRE || material == Material.SOUL_CAMPFIRE
                 || material == Material.POWDER_SNOW || material == Material.SWEET_BERRY_BUSH
-                || material == Material.WITHER_ROSE || material == Material.VOID_AIR) {
+                || material == Material.WITHER_ROSE || material == Material.VOID_AIR\n                || material == Material.COBWEB || material == Material.POINTED_DRIPSTONE) {
             return true;
         }
         return getConfig().getBoolean("avoid-water", true)
