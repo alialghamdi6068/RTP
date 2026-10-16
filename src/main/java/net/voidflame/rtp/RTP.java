@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.CompletionException;
 
 public final class RTP extends JavaPlugin implements Listener {
@@ -197,6 +196,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
         String areaPath = "world-areas." + world.getName() + ".";
+        boolean areaConfigured = getConfig().isConfigurationSection("world-areas." + world.getName());
         boolean customArea = getConfig().contains(areaPath + "min-x")
                 && getConfig().contains(areaPath + "max-x")
                 && getConfig().contains(areaPath + "min-z")
@@ -206,6 +206,12 @@ public final class RTP extends JavaPlugin implements Listener {
         int minZ = getConfig().getInt(areaPath + "min-z");
         int maxZ = getConfig().getInt(areaPath + "max-z");
 
+        if (areaConfigured && !customArea) {
+            searches.remove(player.getUniqueId());
+            sendRtpMessage(player, "invalid-area");
+            getLogger().warning("Incomplete RTP area configured for world '" + world.getName() + "'.");
+            return;
+        }
         if (customArea && (minX > maxX || minZ > maxZ)) {
             searches.remove(player.getUniqueId());
             sendRtpMessage(player, "invalid-area");
