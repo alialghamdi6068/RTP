@@ -33,6 +33,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, BukkitTask> countdowns = new HashMap<>();
     private final java.util.Set<UUID> searches = new java.util.HashSet<>();
     private final Map<UUID, BukkitTask> searchTimeouts = new HashMap<>();
+    private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
@@ -185,13 +186,15 @@ public final class RTP extends JavaPlugin implements Listener {
     private void startTeleportSearch(Player player, World world) {
         if (!player.isOnline() || !searches.add(player.getUniqueId())) return;
         UUID playerId = player.getUniqueId();
+        UUID searchToken = UUID.randomUUID();
+        searchTokens.put(playerId, searchToken);
         int timeoutSeconds = Math.max(5, Math.min(120, getConfig().getInt("search-timeout-seconds", 20)));
         searchTimeouts.put(playerId, Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (finishSearch(playerId)) sendRtpMessage(player, "timeout");
+            if (finishSearch(playerId, searchToken)) sendRtpMessage(player, "timeout");
         }, timeoutSeconds * 20L));
         int maxActiveSearches = Math.max(1, Math.min(500, getConfig().getInt("maximum-active-searches", 25)));
         if (searches.size() > maxActiveSearches) {
-            finishSearch(player.getUniqueId());
+            finishSearch(playerId, searchToken);
             sendRtpMessage(player, "busy");
             return;
         }
@@ -248,16 +251,18 @@ public final class RTP extends JavaPlugin implements Listener {
                 candidates[i * 2 + 1] = centerZ + (int) Math.round(Math.sin(angle) * distance);
             }
         }
-        searchCandidate(player, world, candidates, attempts, 0);
+        searchCandidate(player, world, candidates, attempts, 0, searchToken);
     }
 
-    private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index) {
-        if (!player.isOnline() || !searches.contains(player.getUniqueId())) {
-            finishSearch(player.getUniqueId());
+    private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index, UUID searchToken) {
+        UUID playerId = player.getUniqueId();
+        if (!player.isOnline()) {
+            finishSearch(playerId, searchToken);
             return;
         }
+        if (!isActiveSearch(playerId, searchToken)) return;
         if (index >= attempts) {
-            finishSearch(player.getUniqueId());
+            finishSearch(player.getUniqueId(), searchToken);
             sendRtpMessage(player, "failed");
             return;
         }
@@ -266,7 +271,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int z = candidates[index * 2 + 1];
         Location borderCheck = new Location(world, x + 0.5, world.getMinHeight(), z + 0.5);
         if (!world.getWorldBorder().isInside(borderCheck)) {
-            searchCandidate(player, world, candidates, attempts, index + 1);
+            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
             return;
         }
 
@@ -288,7 +293,7 @@ public final class RTP extends JavaPlugin implements Listener {
                             searchCandidate(player, world, candidates, attempts, index + 1);
                             return;
                         }
-                        evaluateCandidate(player, world, x, z, candidates, attempts, index);
+                        evaluateCandidate(player, world, x, z, candidates, attempts, index, searchToken);
                     }));
             return;
         }
@@ -296,11 +301,13 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void evaluateCandidate(Player player, World world, int x, int z,
-                                   int[] candidates, int attempts, int index) {
-        if (!player.isOnline() || !searches.contains(player.getUniqueId())) {
-            searches.remove(player.getUniqueId());
+                                   int[] candidates, int attempts, int index, UUID searchToken) {
+        UUID playerId = player.getUniqueId();
+        if (!player.isOnline()) {
+            finishSearch(playerId, searchToken);
             return;
         }
+        if (!isActiveSearch(playerId, searchToken)) return;
         try {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                 searchCandidate(player, world, candidates, attempts, index + 1);
@@ -328,7 +335,7 @@ public final class RTP extends JavaPlugin implements Listener {
                     playerLocation.getYaw(), playerLocation.getPitch());
             player.teleportAsync(destination).whenComplete((success, error) ->
                     Bukkit.getScheduler().runTask(this, () -> {
-                        if (!finishSearch(player.getUniqueId()) || !player.isOnline()) return;
+                        if (!finishSearch(player.getUniqueId(), searchToken) || !player.isOnline()) return;
                         if (error != null) {
                             getLogger().warning("RTP teleport failed for " + player.getName() + ": " + error.getMessage());
                             sendRtpMessage(player, "failed");
@@ -569,8 +576,18 @@ public final class RTP extends JavaPlugin implements Listener {
         saveConfig();
     }
 
+    private boolean isActiveSearch(UUID playerId, UUID searchToken) {
+        return searches.contains(playerId) && searchToken.equals(searchTokens.get(playerId));
+    }
+
+    private boolean finishSearch(UUID playerId, UUID searchToken) {
+        if (!searchToken.equals(searchTokens.get(playerId))) return false;
+        return finishSearch(playerId);
+    }
+
     private boolean finishSearch(UUID playerId) {
         boolean wasSearching = searches.remove(playerId);
+        searchTokens.remove(playerId);
         BukkitTask timeout = searchTimeouts.remove(playerId);
         if (timeout != null) timeout.cancel();
         return wasSearching;
