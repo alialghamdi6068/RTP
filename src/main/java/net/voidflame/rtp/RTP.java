@@ -200,10 +200,48 @@ public final class RTP extends JavaPlugin implements Listener {
         return color(getConfig().getString("menu.title", "&8&lRandom Teleport"));
     }
 
+    private static final int PLAYER_MENU_PREVIOUS_SLOT_27 = 18;
+    private static final int PLAYER_MENU_NEXT_SLOT_27 = 26;
+    private static final int PLAYER_MENU_PREVIOUS_SLOT_54 = 45;
+    private static final int PLAYER_MENU_NEXT_SLOT_54 = 53;
+
+    private String playerMenuPageTitle(int page) {
+        return playerMenuTitle() + ChatColor.DARK_GRAY + " | Page " + (page + 1);
+    }
+
+    private List<Integer> playerWorldMenuSlots(int menuSize) {
+        List<Integer> slots = new ArrayList<>();
+        int[] candidates = menuSize <= 27
+                ? new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25}
+                : new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25,
+                    28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
+        int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
+        for (int candidate : candidates) {
+            if (candidate < menuSize && candidate != closeSlot && candidate != 4) slots.add(candidate);
+        }
+        // Preserve configured positions for the three standard dimensions when they are valid and free.
+        int[] configured = {
+                getConfig().getInt("menu.world-slots.world", 11),
+                getConfig().getInt("menu.world-slots.world_nether", 13),
+                getConfig().getInt("menu.world-slots.world_the_end", 15)
+        };
+        for (int desired : configured) {
+            if (desired >= 0 && desired < menuSize && slots.contains(desired)) {
+                slots.remove(Integer.valueOf(desired));
+                slots.add(0, desired);
+            }
+        }
+        return slots;
+    }
+
     private void openPlayerGui(Player player) {
+        openPlayerGui(player, 0);
+    }
+
+    private void openPlayerGui(Player player, int requestedPage) {
         int menuSize = Math.max(27, Math.min(54, getConfig().getInt("menu.size", 27)));
         menuSize = ((menuSize + 8) / 9) * 9;
-        Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuTitle());
+        Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(Math.max(0, requestedPage)));
         if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
         inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
                 "&8━━━━━━━━━━━━━━━━━━━━",
@@ -211,38 +249,58 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7A safe random location will be selected.",
                 "",
                 "&fSelect a world below."));
-        int[] slots = {
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world", 11))),
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_nether", 13))),
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_the_end", 15)))
-        };
-        Map<String, Material> icons = Map.of(
-                "world", Material.GRASS_BLOCK,
-                "world_nether", Material.NETHERRACK,
-                "world_the_end", Material.END_STONE);
-        Map<String, String> names = Map.of(
-                "world", "Overworld",
-                "world_nether", "Nether",
-                "world_the_end", "The End");
+
         List<World> selectable = getSelectableWorlds();
-        for (int i = 0; i < Math.min(slots.length, selectable.size()); i++) {
-            World world = selectable.get(i);
-            String name = names.getOrDefault(world.getName(), world.getName());
-            Material icon = icons.getOrDefault(world.getName(),
-                    world.getEnvironment() == World.Environment.NETHER ? Material.NETHERRACK
-                    : world.getEnvironment() == World.Environment.THE_END ? Material.END_STONE : Material.GRASS_BLOCK);
-            inventory.setItem(slots[i], guiItem(icon, "&a&l" + name,
+        List<Integer> slots = playerWorldMenuSlots(menuSize);
+        int pageSize = slots.size();
+        int maxPage = pageSize == 0 ? 0 : Math.max(0, (selectable.size() - 1) / pageSize);
+        int page = Math.max(0, Math.min(requestedPage, maxPage));
+        // Recreate with the clamped page so click handling always reflects the visible page.
+        if (page != Math.max(0, requestedPage)) {
+            inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(page));
+            if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
+            inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
+                    "&8━━━━━━━━━━━━━━━━━━━━", "&7Choose your destination.",
+                    "&7A safe random location will be selected.", "", "&fSelect a world below."));
+        }
+
+        for (int i = 0; i < pageSize; i++) {
+            int worldIndex = page * pageSize + i;
+            if (worldIndex >= selectable.size()) break;
+            World world = selectable.get(worldIndex);
+            String name = switch (world.getEnvironment()) {
+                case NETHER -> "Nether";
+                case THE_END -> "The End";
+                default -> world.getName().equalsIgnoreCase("world") ? "Overworld" : world.getName();
+            };
+            Material icon = switch (world.getEnvironment()) {
+                case NETHER -> Material.NETHERRACK;
+                case THE_END -> Material.END_STONE;
+                default -> Material.GRASS_BLOCK;
+            };
+            int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
+            int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
+            long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
+            inventory.setItem(slots.get(i), guiItem(icon, "&a&l" + name,
                     "&8━━━━━━━━━━━━━━━━━━━━",
                     "&7World: &f" + world.getName(),
                     "&7Players online: &f" + world.getPlayers().size(),
-                    "&7Search radius: &f" + getConfig().getInt("minimum-radius", 100) + "–"
-                            + getConfig().getInt("maximum-radius", 5000) + " blocks",
-                    "&7Cooldown: &f" + getConfig().getLong("cooldown-seconds", 30) + "s",
+                    "&7Search radius: &f" + minRadius + "–" + maxRadius + " blocks",
+                    "&7Cooldown: &f" + cooldown + "s",
                     "",
                     "&a▶ Click to teleport"));
         }
+
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
         inventory.setItem(closeSlot, guiItem(Material.BARRIER, "&c&lCLOSE MENU", "&7Close this menu."));
+        if (maxPage > 0) {
+            int previousSlot = menuSize <= 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
+            int nextSlot = menuSize <= 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
+            if (page > 0) inventory.setItem(previousSlot, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE",
+                    "&7Page &f" + page + " &7of &f" + (maxPage + 1)));
+            if (page < maxPage) inventory.setItem(nextSlot, guiItem(Material.ARROW, "&e&lNEXT PAGE",
+                    "&7Page &f" + (page + 2) + " &7of &f" + (maxPage + 1)));
+        }
         player.openInventory(inventory);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.6f, 1.1f);
     }
@@ -841,29 +899,45 @@ public final class RTP extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerRtpMenuClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!event.getView().getTitle().equals(playerMenuTitle())) return;
+        String title = event.getView().getTitle();
+        String pagePrefix = playerMenuTitle() + ChatColor.DARK_GRAY + " | Page ";
+        if (!title.startsWith(pagePrefix)) return;
         event.setCancelled(true);
         int slot = event.getRawSlot();
-        if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
-        int configuredCloseSlot = Math.max(0, Math.min(event.getView().getTopInventory().getSize() - 1,
-                getConfig().getInt("menu.close-slot", 22)));
-        if (slot == configuredCloseSlot) {
+        int menuSize = event.getView().getTopInventory().getSize();
+        if (slot < 0 || slot >= menuSize) return;
+
+        int page;
+        try {
+            page = Integer.parseInt(title.substring(pagePrefix.length())) - 1;
+        } catch (NumberFormatException exception) {
+            player.closeInventory();
+            return;
+        }
+        int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
+        if (slot == closeSlot) {
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 0.5f, 1.0f);
             return;
         }
-        int menuSize = event.getView().getTopInventory().getSize();
-        int[] slots = {
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world", 11))),
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_nether", 13))),
-                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_the_end", 15)))
-        };
-        for (int i = 0; i < slots.length; i++) {
-            if (slot == slots[i]) {
-                List<World> worlds = getSelectableWorlds();
-                if (i < worlds.size()) requestTeleport(player, worlds.get(i));
-                return;
-            }
+        int previousSlot = menuSize <= 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
+        int nextSlot = menuSize <= 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
+        List<World> worlds = getSelectableWorlds();
+        List<Integer> worldSlots = playerWorldMenuSlots(menuSize);
+        int pageSize = worldSlots.size();
+        int maxPage = pageSize == 0 ? 0 : Math.max(0, (worlds.size() - 1) / pageSize);
+        if (slot == previousSlot && page > 0) {
+            openPlayerGui(player, page - 1);
+            return;
+        }
+        if (slot == nextSlot && page < maxPage) {
+            openPlayerGui(player, page + 1);
+            return;
+        }
+        int selectedIndex = worldSlots.indexOf(slot);
+        int worldIndex = page * pageSize + selectedIndex;
+        if (selectedIndex >= 0 && worldIndex >= 0 && worldIndex < worlds.size()) {
+            requestTeleport(player, worlds.get(worldIndex));
         }
     }
 
