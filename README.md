@@ -8,7 +8,7 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 - `/adminrtp` administration entry point with global settings, world enable/disable controls, and per-world settings GUI.
 - Action-bar countdown, countdown sounds, cancellation feedback, and teleport success sound.
 - Player-only, private RTP feedback with configurable color-coded messages.
-- Configurable countdown and per-player cooldown, with optional per-world overrides for countdown, cooldown, search radius, Y limits, attempts, timeout, and enabled state.
+- Configurable countdown and persistent per-player cooldown saved after successful teleports, with optional per-world overrides for countdown, cooldown, search radius, Y limits, attempts, timeout, and enabled state.
 - Countdown cancellation when a player changes block; looking around does not cancel it. Cancelled countdowns refund the cooldown.
 - Per-world rectangular X/Z areas, or a radius range around the destination world's spawn.
 - World allow/deny lists and operator GUIs for world management and live settings (countdown, cooldown, attempts, concurrent searches, search timeout, chunk loading, and water avoidance).
@@ -69,7 +69,7 @@ Main settings in `plugins/RTP/config.yml`. Per-world overrides live under `world
 | `maximum-radius` | `5000` | Maximum distance from world spawn when no custom area is configured |
 | `countdown-seconds` | `5` | Allowed range: 1–60 seconds |
 | `cooldown-seconds` | `30` | Allowed range: 0–86400 seconds |
-| `maximum-attempts` | `20` | Allowed range: 1–200 candidate locations per request |
+| `maximum-attempts` | `30` | Allowed range: 1–200 candidate locations per request |
 | `maximum-active-searches` | `25` | Allowed range: 1–500 simultaneous searches |
 | `search-timeout-seconds` | `20` | Allowed range: 5–120 seconds before a stalled search is stopped |
 | `load-chunks` | `false` | If enabled, unloaded chunks may be generated asynchronously |
