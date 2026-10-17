@@ -126,7 +126,7 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("world-disabled"));
             return;
         }
-        if (disabledWorlds.contains(world.getName())) {
+        if (disabledWorlds.contains(world.getName()) || !isWorldRtpEnabled(world)) {
             player.sendMessage(message("destination-world-disabled"));
             return;
         }
@@ -140,7 +140,8 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("already-counting"));
             return;
         }
-        long cooldownSeconds = Math.max(0, getConfig().getLong("cooldown-seconds", 30));
+        long cooldownSeconds = Math.max(0, worldLong(world, "cooldown-seconds",
+                getConfig().getLong("cooldown-seconds", 30)));
         long now = System.currentTimeMillis();
         long lastUse = cooldowns.getOrDefault(playerId, 0L);
         long remaining = cooldownSeconds - ((now - lastUse) / 1000L);
@@ -154,15 +155,31 @@ public final class RTP extends JavaPlugin implements Listener {
         startCountdown(player, world);
     }
 
+    private String worldSettingPath(World world, String setting) {
+        return "world-settings." + world.getName() + "." + setting;
+    }
+
+    private int worldInt(World world, String setting, int fallback) {
+        return getConfig().getInt(worldSettingPath(world, setting), fallback);
+    }
+
+    private long worldLong(World world, String setting, long fallback) {
+        return getConfig().getLong(worldSettingPath(world, setting), fallback);
+    }
+
+    private boolean isWorldRtpEnabled(World world) {
+        return getConfig().getBoolean(worldSettingPath(world, "enabled"), true);
+    }
+
     private List<World> getSelectableWorlds() {
         List<World> selectable = new ArrayList<>();
         List<String> disabled = getConfig().getStringList("disabled-worlds");
         for (String name : List.of("world", "world_nether", "world_the_end")) {
             World world = Bukkit.getWorld(name);
-            if (world != null && !disabled.contains(name)) selectable.add(world);
+            if (world != null && !disabled.contains(name) && isWorldRtpEnabled(world)) selectable.add(world);
         }
         for (World world : Bukkit.getWorlds()) {
-            if (!disabled.contains(world.getName())
+            if (!disabled.contains(world.getName()) && isWorldRtpEnabled(world)
                     && selectable.stream().noneMatch(existing -> existing.getName().equals(world.getName()))) {
                 selectable.add(world);
             }
@@ -220,7 +237,8 @@ rue;
 
     private void startCountdown(Player player, World world) {
         UUID id = player.getUniqueId();
-        int seconds = Math.max(1, getConfig().getInt("countdown-seconds", 5));
+        int seconds = Math.max(1, worldInt(world, "countdown-seconds",
+                getConfig().getInt("countdown-seconds", 5)));
         player.sendMessage(message("countdown-start").replace("%time%", String.valueOf(seconds)));
         player.sendActionBar(Component.text("Random teleport in " + seconds + "s"));
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
@@ -281,7 +299,8 @@ rue;
         UUID playerId = player.getUniqueId();
         UUID searchToken = UUID.randomUUID();
         searchTokens.put(playerId, searchToken);
-        int timeoutSeconds = Math.max(5, Math.min(120, getConfig().getInt("search-timeout-seconds", 20)));
+        int timeoutSeconds = Math.max(5, Math.min(120, worldInt(world, "search-timeout-seconds",
+                getConfig().getInt("search-timeout-seconds", 20))));
         searchTimeouts.put(playerId, Bukkit.getScheduler().runTaskLater(this, () -> {
             if (finishSearch(playerId, searchToken)) sendRtpMessage(player, "timeout");
         }, timeoutSeconds * 20L));
@@ -293,9 +312,9 @@ rue;
         }
         sendRtpMessage(player, "searching");
 
-        int minRadius = Math.max(0, getConfig().getInt("minimum-radius", 100));
-        int maxRadius = Math.max(minRadius + 1, getConfig().getInt("maximum-radius", 5000));
-        int attempts = Math.max(1, Math.min(200, getConfig().getInt("maximum-attempts", 20)));
+        int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100)));
+        int maxRadius = Math.max(minRadius + 1, worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)));
+        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 20))));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
@@ -408,7 +427,9 @@ rue;
             }
             Block ground = world.getHighestBlockAt(x, z);
             int groundY = ground.getY();
-            if (groundY < world.getMinHeight() || groundY + 2 >= world.getMaxHeight()) {
+            int minimumY = Math.max(world.getMinHeight(), worldInt(world, "minimum-y", world.getMinHeight()));
+            int maximumY = Math.min(world.getMaxHeight() - 2, worldInt(world, "maximum-y", world.getMaxHeight() - 2));
+            if (groundY < minimumY || groundY > maximumY || groundY + 2 >= world.getMaxHeight()) {
                 searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
@@ -814,6 +835,8 @@ rue;
                 || material == Material.COBWEB || material == Material.POINTED_DRIPSTONE) {
             return true;
         }
+        if (material.name().endsWith("_LEAVES") || material == Material.AZALEA_LEAVES
+                || material == Material.FLOWERING_AZALEA_LEAVES) return true;
         return getConfig().getBoolean("avoid-water", true)
                 && (material == Material.WATER || material == Material.BUBBLE_COLUMN);
     }
