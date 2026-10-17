@@ -4,7 +4,7 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 
 ## Features
 
-- Donut-inspired player-facing `/rtp` world selector with a clean 27-slot menu and dimension icons.
+- Donut-inspired player-facing `/rtp` world selector with a clean configurable 27/54-slot menu, dimension icons, and automatic pagination for all eligible loaded worlds.
 - `/adminrtp` administration entry point with global settings, world enable/disable controls, and per-world settings GUI.
 - Action-bar countdown, countdown sounds, cancellation feedback, and teleport success sound.
 - Player-only, private RTP feedback with configurable color-coded messages.
@@ -15,7 +15,7 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 - Safe destination checks for solid ground, two passable blocks, hazardous blocks, world height, and world border.
 - Unloaded chunks are skipped by default. When chunk loading is enabled, Paper's asynchronous chunk API is used instead of synchronously generating a chunk on the server thread.
 - Configurable cap on concurrent searches and a hard upper bound on candidate attempts.
-- Configuration sanity checks on startup and `/rtp reload`.
+- Configuration sanity checks for global and per-world limits on startup and `/rtp reload`.
 - GitHub Actions build that packages `target/RTP.jar`.
 
 ## Requirements
