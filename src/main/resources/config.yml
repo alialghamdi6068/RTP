@@ -1,139 +1,59 @@
-# ============================================================
-#                         RTP CONFIG
-# ============================================================
-# Random teleport settings for Paper.
-# After editing this file, run: /rtp reload
-#
-# TIP: Values below are safe defaults. Customize only what you need.
-# ============================================================
+# VoidFlame RTP — Donut-inspired world selector and safe random teleport.
+# Run /rtp reload after changing this file.
 
-
-# ------------------------------------------------------------
-# 1. DESTINATION WORLD
-# ------------------------------------------------------------
-# "" = use the world the player is currently standing in.
-# Example: world: "world"
 world: ""
-
-
-# ------------------------------------------------------------
-# 2. WORLD ACCESS
-# ------------------------------------------------------------
-# Worlds players are allowed to START RTP from.
-# [] = allow all source worlds except those in disabled-worlds.
-# Example: allowed-worlds: ["world", "world_nether"]
 allowed-worlds: []
-
-# Worlds where RTP is disabled entirely. These worlds cannot be
-# used as a source world or as the configured destination world.
-# Example: disabled-worlds: ["world_the_end"]
 disabled-worlds: []
+world-areas: {}
+minimum-radius: 100
+maximum-radius: 5000
+countdown-seconds: 5
+cooldown-seconds: 30
+maximum-attempts: 30
+maximum-active-searches: 25
+search-timeout-seconds: 20
+load-chunks: false
+avoid-water: true
 
+# Player menu defaults: the three standard dimensions are displayed when loaded.
+menu:
+  title: "&8&lRandom Teleport"
+  filler: true
+  close-slot: 22
+  world-slots:
+    world: 11
+    world_nether: 13
+    world_the_end: 15
 
-# ------------------------------------------------------------
-# 3. CUSTOM RTP AREAS (X / Z COORDINATES)
-# ------------------------------------------------------------
-# Set a separate rectangular area for each world.
-# Coordinates are block coordinates; Y is chosen automatically.
-#
-# A custom area overrides minimum-radius / maximum-radius for that world.
-# Leave as {} to use the radius settings instead.
-#
-# EXAMPLE:
+# Optional per-world area override; values are X/Z block coordinates.
 # world-areas:
 #   world:
 #     min-x: -3000
 #     max-x: 3000
-#     min-z: -2000
-#     max-z: 2000
-#   world_nether:
-#     min-x: -1000
-#     max-x: 1000
-#     min-z: -1000
-#     max-z: 1000
-#
-# IMPORTANT: min-x must not be greater than max-x.
-#            min-z must not be greater than max-z.
-world-areas: {}
+#     min-z: -3000
+#     max-z: 3000
 
-
-# ------------------------------------------------------------
-# 4. DEFAULT RTP RANGE
-# ------------------------------------------------------------
-# Used only for worlds without a custom entry in world-areas.
-# Distance is measured from that world's spawn point.
-minimum-radius: 100
-maximum-radius: 5000
-
-
-# ------------------------------------------------------------
-# 5. TELEPORT COUNTDOWN & COOLDOWN
-# ------------------------------------------------------------
-# Seconds the player must remain still before teleporting.
-# Moving to another block cancels the countdown.
-countdown-seconds: 5
-
-# Minimum time between RTP requests for each player.
-# The cooldown starts when the countdown begins.
-cooldown-seconds: 30
-
-
-# ------------------------------------------------------------
-# 6. PERFORMANCE & SAFE LOCATION CHECKS
-# ------------------------------------------------------------
-# Number of candidate locations checked per request (1-200).
-# Higher values may improve success rates but do more work.
-maximum-attempts: 20
-
-# Maximum number of simultaneous RTP searches on the server (1-500).
-# Requests above this limit are rejected instead of creating excessive load.
-maximum-active-searches: 25
-
-# Maximum time to search for a safe location (5-120 seconds).
-# Prevents stalled chunk loads from occupying a search slot indefinitely.
-search-timeout-seconds: 20
-
-# false = skip unloaded chunks to help prevent lag.
-# true  = allow loading/generating chunks; this may cause lag.
-load-chunks: false
-
-# true = avoid water and common unsafe blocks.
-avoid-water: true
-
-
-# ------------------------------------------------------------
-# 7. PLAYER MESSAGES
-# ------------------------------------------------------------
-# Use & color codes. Keep placeholders exactly as written:
-# %time% %x% %y% %z% %world%
 messages:
-  # Shown before every chat message. Use & color codes.
   prefix: "&8[&5&lRTP&8] &r"
-
-  # Errors and command feedback
   no-permission: "&cYou don't have permission to use this command."
-  usage: "&7Usage: &f/rtp &8[&fgui&8|&fworlds&8|&freload&8]"
+  usage: "&7Usage: &f/rtp &8[&fworld&8|&fgui&8|&fworlds&8|&freload&8]"
   players-only: "&cThis command can only be used by a player."
   admin-gui-players-only: "&cThe admin menu can only be opened in-game."
   cooldown: "&7Please wait &e&l%time%s &7before using RTP again."
-  already-counting: "&eYour RTP countdown is already running. Stay still."
-  world-not-found: "&cThe configured destination world could not be found."
+  already-counting: "&eYour RTP request is already running. Please wait."
+  world-not-found: "&cThat destination world is not loaded or does not exist."
   world-not-allowed: "&cYou cannot start RTP from this world."
   world-disabled: "&cRTP is disabled in this world."
   destination-world-disabled: "&cRTP is disabled in the destination world."
   invalid-area: "&cThe RTP area for this world has invalid coordinates."
-
-  # Teleport countdown and result
   countdown-start: "&7Random teleport starts in &d&l%time%s&7. &eDon't move!"
   countdown-tick: "&7Teleporting in &d&l%time%&7..."
   countdown-cancelled: "&cTeleport cancelled because you moved."
   searching: "&7Searching for a safe location&8..."
   success: "&aTeleport successful! &7Location: &f%x%&8, &f%y%&8, &f%z% &7in &d%world%&7."
-  failed: "&cCouldn't find a safe location. &7Please try again."
-  busy: "&eRTP is busy right now. &7Please try again in a moment."
-  timeout: "&cRTP search took too long. &7Please try again in a moment."
-
-  # Admin feedback
+  failed: "&cCouldn't find a safe location. Please try again."
+  busy: "&eRTP is busy right now. Please try again in a moment."
+  timeout: "&cRTP search took too long. Please try again."
   world-enabled: "&aRTP enabled for world &f%world%&a."
   world-disabled-admin: "&cRTP disabled for world &f%world%&c."
   reloaded: "&aConfiguration reloaded successfully."
