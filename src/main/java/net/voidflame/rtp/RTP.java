@@ -256,7 +256,9 @@ public final class RTP extends JavaPlugin implements Listener {
                 getConfig().getInt("menu.world-slots.world_nether", 13),
                 getConfig().getInt("menu.world-slots.world_the_end", 15)
         };
-        for (int desired : configured) {
+        // Add in reverse so the final order matches Overworld, Nether, then End.
+        for (int i = configured.length - 1; i >= 0; i--) {
+            int desired = configured[i];
             if (desired >= 0 && desired < menuSize && slots.contains(desired)) {
                 slots.remove(Integer.valueOf(desired));
                 slots.add(0, desired);
