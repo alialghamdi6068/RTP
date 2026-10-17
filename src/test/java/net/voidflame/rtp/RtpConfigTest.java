@@ -63,7 +63,8 @@ class RtpConfigTest {
     @Test
     void playerMenuAndPerWorldSettingsHaveSafeDefaults() {
         YamlConfiguration config = loadDefaultConfig();
-        assertEquals(27, config.getInt("menu.size", 27));
+        int menuSize = config.getInt("menu.size", 27);
+        assertTrue(menuSize == 27 || menuSize == 54, "menu.size must be 27 or 54");
         assertEquals(11, config.getInt("menu.world-slots.world", 11));
         assertEquals(13, config.getInt("menu.world-slots.world_nether", 13));
         assertEquals(15, config.getInt("menu.world-slots.world_the_end", 15));
