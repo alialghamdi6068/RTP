@@ -19,6 +19,7 @@ avoid-water: true
 # Player menu defaults: the three standard dimensions are displayed when loaded.
 menu:
   title: "&8&lRandom Teleport"
+  size: 27
   filler: true
   close-slot: 22
   world-slots:
