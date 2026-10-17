@@ -40,7 +40,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
-    private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World";
+    private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World | Page ";
     private static final String GUI_WORLD_SETTINGS_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "World RTP | ";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
@@ -760,18 +760,31 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void openWorldSettingsSelector(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SETTINGS_SELECT_TITLE);
+        openWorldSettingsSelector(player, 0);
+    }
+
+    private void openWorldSettingsSelector(Player player, int requestedPage) {
+        List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+        int pageSize = 44; // Slot 4 is reserved for the title card.
+        int maxPage = Math.max(0, (worlds.size() - 1) / pageSize);
+        int page = Math.max(0, Math.min(requestedPage, maxPage));
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SETTINGS_SELECT_TITLE + (page + 1));
         fillGui(inventory);
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lPER-WORLD RTP SETTINGS",
                 "&8━━━━━━━━━━━━━━━━━━━━",
                 "&7Select a loaded world to edit its RTP settings.",
-                "&7Changes save automatically to config.yml."));
-        List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
-        int limit = Math.min(45, worlds.size());
-        for (int i = 0; i < limit; i++) {
+                "&7Changes save automatically to config.yml.",
+                "",
+                "&7Page: &f" + (page + 1) + " &8/ &f" + (maxPage + 1)));
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, worlds.size());
+        for (int i = start; i < end; i++) {
             World world = worlds.get(i);
-            boolean enabled = isWorldRtpEnabled(world) && !getConfig().getStringList("disabled-worlds").contains(world.getName());
-            inventory.setItem(i, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+            int slot = i - start;
+            if (slot >= 4) slot++;
+            boolean enabled = isWorldRtpEnabled(world)
+                    && !getConfig().getStringList("disabled-worlds").contains(world.getName());
+            inventory.setItem(slot, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
                     (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
                     "&8━━━━━━━━━━━━━━━━━━━━",
                     "&7Environment: &f" + world.getEnvironment().name(),
@@ -781,10 +794,13 @@ public final class RTP extends JavaPlugin implements Listener {
                     "",
                     "&d▶ Click to edit this world"));
         }
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE",
+                page > 0 ? "&7Go to page " + page : "&8You are on the first page"));
         inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
+        inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE",
+                page < maxPage ? "&7Go to page " + (page + 2) : "&8You are on the last page"));
         player.openInventory(inventory);
     }
-
     private void openWorldSettingsGui(Player player, World world) {
         String title = GUI_WORLD_SETTINGS_PREFIX + world.getName();
         Inventory inventory = Bukkit.createInventory(null, 54, title);
@@ -992,15 +1008,24 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             return;
         }
-        if (title.equals(GUI_WORLD_SETTINGS_SELECT_TITLE)) {
+        if (title.startsWith(GUI_WORLD_SETTINGS_SELECT_TITLE)) {
             event.setCancelled(true);
             if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
             int slot = event.getRawSlot();
             if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            int page;
+            try { page = Integer.parseInt(title.substring(GUI_WORLD_SETTINGS_SELECT_TITLE.length())) - 1; }
+            catch (NumberFormatException exception) { player.closeInventory(); return; }
             if (slot == 49) { openMainGui(player); return; }
-            if (slot >= 45) return;
             List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
-            if (slot < worlds.size()) openWorldSettingsGui(player, worlds.get(slot));
+            int pageSize = 44;
+            int maxPage = Math.max(0, (worlds.size() - 1) / pageSize);
+            if (slot == 45) { if (page > 0) openWorldSettingsSelector(player, page - 1); return; }
+            if (slot == 53) { if (page < maxPage) openWorldSettingsSelector(player, page + 1); return; }
+            if (slot == 4 || slot >= 45) return;
+            int localIndex = slot > 4 ? slot - 1 : slot;
+            int worldIndex = page * pageSize + localIndex;
+            if (worldIndex >= 0 && worldIndex < worlds.size()) openWorldSettingsGui(player, worlds.get(worldIndex));
             return;
         }
         if (title.startsWith(GUI_WORLD_SETTINGS_PREFIX)) {
