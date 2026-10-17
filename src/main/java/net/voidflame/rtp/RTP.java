@@ -272,8 +272,8 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void openPlayerGui(Player player, int requestedPage) {
-        int menuSize = Math.max(27, Math.min(54, getConfig().getInt("menu.size", 27)));
-        menuSize = ((menuSize + 8) / 9) * 9;
+        int configuredMenuSize = getConfig().getInt("menu.size", 27);
+        int menuSize = configuredMenuSize == 54 ? 54 : 27;
         Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(Math.max(0, requestedPage)));
         if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
         inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
@@ -495,7 +495,8 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             // Paper async chunk loading avoids synchronously generating chunks on the main server thread.
             world.getChunkAtAsync(chunkX, chunkZ, true).whenComplete((chunk, error) ->
-                    Bukkit.getScheduler().runTask(this, () -> {
+                    runOnMainIfEnabled(() -> {
+                        if (!isActiveSearch(player.getUniqueId(), searchToken)) return;
                         if (error != null) {
                             Throwable cause = error instanceof CompletionException && error.getCause() != null
                                     ? error.getCause() : error;
@@ -548,7 +549,7 @@ public final class RTP extends JavaPlugin implements Listener {
             Location destination = new Location(world, x + 0.5, groundY + 1.0, z + 0.5,
                     playerLocation.getYaw(), playerLocation.getPitch());
             player.teleportAsync(destination).whenComplete((success, error) ->
-                    Bukkit.getScheduler().runTask(this, () -> {
+                    runOnMainIfEnabled(() -> {
                         if (!finishSearch(player.getUniqueId(), searchToken) || !player.isOnline()) return;
                         if (error != null) {
                             getLogger().warning("RTP teleport failed for " + player.getName() + ": " + error.getMessage());
@@ -1152,6 +1153,17 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void validateConfig() {
+        int configuredMenuSize = getConfig().getInt("menu.size", 27);
+        if (configuredMenuSize != 27 && configuredMenuSize != 54) {
+            getLogger().warning("menu.size must be 27 or 54; using 27.");
+            getConfig().set("menu.size", 27);
+        }
+        int closeSlot = getConfig().getInt("menu.close-slot", 22);
+        if (closeSlot < 0 || closeSlot >= getConfig().getInt("menu.size", 27)) {
+            getLogger().warning("menu.close-slot is outside the configured menu; using 22.");
+            getConfig().set("menu.close-slot", 22);
+        }
+
         int countdown = getConfig().getInt("countdown-seconds", 5);
         if (countdown < 1 || countdown > 60) {
             getLogger().warning("countdown-seconds must be between 1 and 60; using 5.");
@@ -1271,6 +1283,17 @@ public final class RTP extends JavaPlugin implements Listener {
             }
         }
         saveConfig();
+    }
+
+    private void runOnMainIfEnabled(Runnable action) {
+        if (!isEnabled()) return;
+        try {
+            Bukkit.getScheduler().runTask(this, () -> {
+                if (isEnabled()) action.run();
+            });
+        } catch (org.bukkit.plugin.IllegalPluginAccessException ignored) {
+            // Shutdown raced with an asynchronous completion; onDisable cleans up state.
+        }
     }
 
     private boolean isActiveSearch(UUID playerId, UUID searchToken) {
