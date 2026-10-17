@@ -40,7 +40,6 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
-    private static final String GUI_PLAYER_TITLE = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Random Teleport";
     private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World";
     private static final String GUI_WORLD_SETTINGS_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "World RTP | ";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
@@ -197,16 +196,24 @@ public final class RTP extends JavaPlugin implements Listener {
         return selectable;
     }
 
+    private String playerMenuTitle() {
+        return color(getConfig().getString("menu.title", "&8&lRandom Teleport"));
+    }
+
     private void openPlayerGui(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 27, GUI_PLAYER_TITLE);
-        fillGui(inventory);
+        int menuSize = Math.max(9, Math.min(54, getConfig().getInt("menu.size", 27)));
+        menuSize = ((menuSize + 8) / 9) * 9;
+        Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuTitle());
+        if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
         inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
                 "&8━━━━━━━━━━━━━━━━━━━━",
                 "&7Choose your destination.",
                 "&7A safe random location will be selected.",
                 "",
                 "&fSelect a world below."));
-        int[] slots = {11, 13, 15};
+        int[] slots = {getConfig().getInt("menu.world-slots.world", 11),
+                getConfig().getInt("menu.world-slots.world_nether", 13),
+                getConfig().getInt("menu.world-slots.world_the_end", 15)};
         Map<String, Material> icons = Map.of(
                 "world", Material.GRASS_BLOCK,
                 "world_nether", Material.NETHERRACK,
@@ -823,7 +830,7 @@ public final class RTP extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerRtpMenuClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!event.getView().getTitle().equals(GUI_PLAYER_TITLE)) return;
+        if (!event.getView().getTitle().equals(playerMenuTitle())) return;
         event.setCancelled(true);
         int slot = event.getRawSlot();
         if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
