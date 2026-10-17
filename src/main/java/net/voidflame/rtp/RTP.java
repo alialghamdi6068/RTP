@@ -29,6 +29,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import java.io.File;
+import java.io.IOException;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, Long> cooldowns = new HashMap<>();
@@ -37,6 +40,8 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, BukkitTask> searchTimeouts = new HashMap<>();
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
+    private File cooldownFile;
+    private YamlConfiguration cooldownData;
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
@@ -47,6 +52,7 @@ public final class RTP extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        loadCooldowns();
         validateConfig();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("RTP enabled.");
@@ -60,6 +66,32 @@ public final class RTP extends JavaPlugin implements Listener {
         searchTimeouts.clear();
         searches.clear();
         searchTokens.clear();
+        saveCooldowns();
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!command.getName().equalsIgnoreCase("rtp")) return List.of();
+        if (args.length == 1) {
+            List<String> options = new ArrayList<>();
+            String prefix = args[0].toLowerCase(java.util.Locale.ROOT);
+            if (sender.hasPermission("rtp.admin")) {
+                for (String option : List.of("admin", "gui", "worlds", "reload")) {
+                    if (option.startsWith(prefix)) options.add(option);
+                }
+            }
+            if (sender.hasPermission("rtp.use")) {
+                for (World world : Bukkit.getWorlds()) {
+                    if (world.getName().toLowerCase(java.util.Locale.ROOT).startsWith(prefix)
+                            && isWorldRtpEnabled(world)
+                            && !getConfig().getStringList("disabled-worlds").contains(world.getName())) {
+                        options.add(world.getName());
+                    }
+                }
+            }
+            return options.stream().distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        }
+        return List.of();
     }
 
     @Override
@@ -158,7 +190,6 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("cooldown").replace("%time%", String.valueOf(remaining)));
             return;
         }
-        if (!player.hasPermission("rtp.bypasscooldown")) cooldowns.put(playerId, now);
         player.closeInventory();
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.15f);
         startCountdown(player, world);
@@ -344,8 +375,6 @@ public final class RTP extends JavaPlugin implements Listener {
         BukkitTask task = countdowns.remove(playerId);
         if (task != null) {
             task.cancel();
-            // A cancelled countdown did not perform a teleport, so do not charge the cooldown.
-            cooldowns.remove(playerId);
             event.getPlayer().sendActionBar(Component.text("Random teleport cancelled"));
             event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.8f);
             event.getPlayer().sendMessage(message("countdown-cancelled"));
@@ -358,8 +387,6 @@ public final class RTP extends JavaPlugin implements Listener {
         BukkitTask task = countdowns.remove(playerId);
         if (task != null) {
             task.cancel();
-            // Disconnecting during the countdown cancels the request, so refund its cooldown.
-            cooldowns.remove(playerId);
         }
         finishSearch(playerId);
     }
@@ -528,6 +555,10 @@ public final class RTP extends JavaPlugin implements Listener {
                         if (!Boolean.TRUE.equals(success)) {
                             sendRtpMessage(player, "failed");
                             return;
+                        }
+                        if (!player.hasPermission("rtp.bypasscooldown")) {
+                            cooldowns.put(playerId, System.currentTimeMillis());
+                            saveCooldowns();
                         }
                         player.sendActionBar(Component.text("Teleported successfully"));
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 1.0f);
@@ -1239,6 +1270,42 @@ public final class RTP extends JavaPlugin implements Listener {
         BukkitTask timeout = searchTimeouts.remove(playerId);
         if (timeout != null) timeout.cancel();
         return wasSearching;
+    }
+
+    private void loadCooldowns() {
+        cooldownFile = new File(getDataFolder(), "cooldowns.yml");
+        if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
+            getLogger().warning("Could not create plugin data folder; cooldown persistence may be unavailable.");
+        }
+        cooldownData = YamlConfiguration.loadConfiguration(cooldownFile);
+        long now = System.currentTimeMillis();
+        for (String key : cooldownData.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(key);
+                long timestamp = cooldownData.getLong(key, 0L);
+                // Ignore invalid/future timestamps and old entries to keep the file tidy.
+                if (timestamp > 0 && timestamp <= now && now - timestamp <= 7L * 24 * 60 * 60 * 1000) {
+                    cooldowns.put(id, timestamp);
+                }
+            } catch (IllegalArgumentException ignored) {
+                getLogger().warning("Ignoring invalid UUID in cooldowns.yml: " + key);
+            }
+        }
+    }
+
+    private void saveCooldowns() {
+        if (cooldownFile == null) return;
+        if (cooldownData == null) cooldownData = new YamlConfiguration();
+        cooldownData.getKeys(false).forEach(key -> cooldownData.set(key, null));
+        long now = System.currentTimeMillis();
+        cooldowns.entrySet().removeIf(entry -> entry.getValue() <= 0 || entry.getValue() > now
+                || now - entry.getValue() > 7L * 24 * 60 * 60 * 1000);
+        cooldowns.forEach((id, timestamp) -> cooldownData.set(id.toString(), timestamp));
+        try {
+            cooldownData.save(cooldownFile);
+        } catch (IOException exception) {
+            getLogger().warning("Could not save RTP cooldowns: " + exception.getMessage());
+        }
     }
 
     private String message(String key) {
