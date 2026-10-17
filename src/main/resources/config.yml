@@ -17,6 +17,7 @@ load-chunks: false
 avoid-water: true
 
 # Player menu defaults: standard dimensions appear first, followed by other eligible loaded worlds.
+# Supported sizes are 27 or 54 only; other values reset to 27 to preserve pagination slots.
 # The player selector automatically paginates when more worlds are available than fit on one page.
 menu:
   title: "&8&lRandom Teleport"
