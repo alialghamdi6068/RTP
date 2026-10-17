@@ -4,8 +4,11 @@ A configurable random-teleport plugin for **Paper 26.2** and **Java 25**. Design
 
 ## Features
 
+- Donut-inspired player-facing `/rtp` world selector with a clean 27-slot menu and dimension icons.
+- `/adminrtp` administration entry point with global settings, world enable/disable controls, and per-world settings GUI.
+- Action-bar countdown, countdown sounds, cancellation feedback, and teleport success sound.
 - Player-only, private RTP feedback with configurable color-coded messages.
-- Configurable countdown and per-player cooldown.
+- Configurable countdown and per-player cooldown, with optional per-world overrides for countdown, cooldown, search radius, Y limits, attempts, timeout, and enabled state.
 - Countdown cancellation when a player changes block; looking around does not cancel it. Cancelled countdowns refund the cooldown.
 - Per-world rectangular X/Z areas, or a radius range around the destination world's spawn.
 - World allow/deny lists and operator GUIs for world management and live settings (countdown, cooldown, attempts, concurrent searches, search timeout, chunk loading, and water avoidance).
@@ -39,9 +42,11 @@ The packaged JAR is `target/RTP.jar`.
 
 | Command | Description | Permission |
 | --- | --- | --- |
-| `/rtp` | Start random teleport | `rtp.use` |
+| `/rtp` | Open the random teleport world selector | `rtp.use` |
+| `/rtp <world>` | Start RTP directly to a loaded world | `rtp.use` |
 | `/randomtp` | Alias for `/rtp` | `rtp.use` |
 | `/rtp gui` | Open the RTP Control Center | `rtp.admin` |
+| `/adminrtp` | Open the RTP administration menu | `rtp.admin` |
 | `/rtp worlds` | Open world management directly | `rtp.admin` |
 | `/rtp reload` | Reload and validate configuration | `rtp.admin` |
 
@@ -55,7 +60,7 @@ The packaged JAR is `target/RTP.jar`.
 
 ## Configuration
 
-Main settings in `plugins/RTP/config.yml`:
+Main settings in `plugins/RTP/config.yml`. Per-world overrides live under `world-settings.<world-name>`; omitted values inherit the global defaults.
 
 | Setting | Default | Notes |
 | --- | ---: | --- |
