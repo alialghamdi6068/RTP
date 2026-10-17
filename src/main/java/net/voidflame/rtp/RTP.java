@@ -533,10 +533,11 @@ public final class RTP extends JavaPlugin implements Listener {
             Material groundType = ground.getType();
             Block feet = ground.getRelative(0, 1, 0);
             Block head = ground.getRelative(0, 2, 0);
+            boolean avoidWater = getConfig().getBoolean("avoid-water", true);
             if (!groundType.isSolid() || isUnsafe(groundType)
                     || !feet.isPassable() || !head.isPassable()
                     || isUnsafe(feet.getType()) || isUnsafe(head.getType())
-                    || feet.isLiquid() || head.isLiquid()) {
+                    || (avoidWater && (feet.isLiquid() || head.isLiquid()))) {
                 searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
@@ -758,7 +759,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int end = Math.min(start + 45, worlds.size());
         for (int i = start; i < end; i++) {
             World world = worlds.get(i);
-            boolean enabled = !disabled.contains(world.getName());
+            boolean enabled = !disabled.contains(world.getName()) && isWorldRtpEnabled(world);
             Material icon = enabled ? Material.LIME_DYE : Material.GRAY_DYE;
             inventory.setItem(i - start, guiItem(icon,
                     (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
@@ -906,7 +907,18 @@ public final class RTP extends JavaPlugin implements Listener {
             case 34 -> getConfig().set(base + "maximum-y", Math.min(world.getMaxHeight() - 2, maxY + 10));
             case 37 -> getConfig().set(base + "maximum-attempts", Math.max(1, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) - 5));
             case 39 -> getConfig().set(base + "maximum-attempts", Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) + 5));
-            case 41 -> getConfig().set(base + "enabled", !isWorldRtpEnabled(world));
+            case 41 -> {
+                boolean currentlyEnabled = isWorldRtpEnabled(world)
+                        && !getConfig().getStringList("disabled-worlds").contains(world.getName());
+                getConfig().set(base + "enabled", !currentlyEnabled);
+                List<String> disabledWorlds = new ArrayList<>(getConfig().getStringList("disabled-worlds"));
+                if (currentlyEnabled) {
+                    if (!disabledWorlds.contains(world.getName())) disabledWorlds.add(world.getName());
+                } else {
+                    disabledWorlds.remove(world.getName());
+                }
+                getConfig().set("disabled-worlds", disabledWorlds);
+            }
             case 42 -> getConfig().set(base + "search-timeout-seconds",
                     Math.max(5, worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20)) - 5));
             case 44 -> getConfig().set(base + "search-timeout-seconds",
@@ -1106,12 +1118,15 @@ public final class RTP extends JavaPlugin implements Listener {
         if (worldIndex < 0 || worldIndex >= worlds.size()) return;
         String worldName = worlds.get(worldIndex).getName();
         List<String> disabled = new ArrayList<>(getConfig().getStringList("disabled-worlds"));
-        if (disabled.contains(worldName)) {
-            disabled.remove(worldName);
-            player.sendMessage(message("world-enabled").replace("%world%", worldName));
-        } else {
+        boolean currentlyEnabled = !disabled.contains(worldName) && isWorldRtpEnabled(worlds.get(worldIndex));
+        if (currentlyEnabled) {
             disabled.add(worldName);
+            getConfig().set("world-settings." + worldName + ".enabled", false);
             player.sendMessage(message("world-disabled-admin").replace("%world%", worldName));
+        } else {
+            disabled.remove(worldName);
+            getConfig().set("world-settings." + worldName + ".enabled", true);
+            player.sendMessage(message("world-enabled").replace("%world%", worldName));
         }
         getConfig().set("disabled-worlds", disabled);
         saveConfig();
@@ -1119,7 +1134,7 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private boolean isUnsafe(Material material) {
-        if (material == Material.LAVA || material == Material.MAGMA_BLOCK || material == Material.CACTUS
+        if (material == Material.BEDROCK || material == Material.LAVA || material == Material.MAGMA_BLOCK || material == Material.CACTUS
                 || material == Material.FIRE || material == Material.SOUL_FIRE
                 || material == Material.CAMPFIRE || material == Material.SOUL_CAMPFIRE
                 || material == Material.POWDER_SNOW || material == Material.SWEET_BERRY_BUSH
