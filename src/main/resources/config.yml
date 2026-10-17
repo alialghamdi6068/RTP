@@ -25,6 +25,21 @@ menu:
     world_nether: 13
     world_the_end: 15
 
+# Optional per-world overrides. Omitted values inherit the global settings.
+# Set enabled: false to hide a world from the player menu and block direct RTP.
+# minimum-y / maximum-y constrain the surface Y coordinate accepted for teleport.
+# world-settings:
+#   world:
+#     enabled: true
+#     minimum-radius: 100
+#     maximum-radius: 5000
+#     minimum-y: -64
+#     maximum-y: 320
+#     countdown-seconds: 5
+#     cooldown-seconds: 30
+#     maximum-attempts: 30
+#     search-timeout-seconds: 20
+#
 # Optional per-world area override; values are X/Z block coordinates.
 # world-areas:
 #   world:
