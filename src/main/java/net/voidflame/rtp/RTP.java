@@ -846,7 +846,8 @@ public final class RTP extends JavaPlugin implements Listener {
         int countdown = worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
         long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
         int attempts = worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
-        boolean enabled = isWorldRtpEnabled(world);
+        boolean enabled = isWorldRtpEnabled(world)
+                && !getConfig().getStringList("disabled-worlds").contains(world.getName());
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lWORLD SETTINGS",
                 "&8━━━━━━━━━━━━━━━━━━━━",
                 "&7World: &f" + world.getName(),
