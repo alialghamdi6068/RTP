@@ -767,6 +767,10 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lATTEMPTS -5", "&7Current: &f" + attempts));
         inventory.setItem(38, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS", "&7Current: &f" + attempts, "&7Range: 1–200."));
         inventory.setItem(39, guiItem(Material.LIME_DYE, "&a&lATTEMPTS +5", "&7Increase search attempts."));
+        int timeout = worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20));
+        inventory.setItem(42, guiItem(Material.RED_DYE, "&c&lSEARCH TIMEOUT -5", "&7Current: &f" + timeout + "s"));
+        inventory.setItem(43, guiItem(Material.CLOCK, "&b&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
+        inventory.setItem(44, guiItem(Material.LIME_DYE, "&a&lSEARCH TIMEOUT +5", "&7Increase search timeout."));
         inventory.setItem(41, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
                 enabled ? "&a&lWORLD RTP: ENABLED" : "&c&lWORLD RTP: DISABLED",
                 "&7Toggle whether this world is available in /rtp.",
@@ -798,6 +802,10 @@ public final class RTP extends JavaPlugin implements Listener {
             case 37 -> getConfig().set(base + "maximum-attempts", Math.max(1, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) - 5));
             case 39 -> getConfig().set(base + "maximum-attempts", Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) + 5));
             case 41 -> getConfig().set(base + "enabled", !isWorldRtpEnabled(world));
+            case 42 -> getConfig().set(base + "search-timeout-seconds",
+                    Math.max(5, worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20)) - 5));
+            case 44 -> getConfig().set(base + "search-timeout-seconds",
+                    Math.min(120, worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20)) + 5));
             default -> { return; }
         }
         saveConfig();
