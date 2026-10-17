@@ -413,7 +413,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
         int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100)));
         int maxRadius = Math.max(minRadius + 1, worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)));
-        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 20))));
+        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30))));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
@@ -597,7 +597,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&8━━━━━━━━━━━━━━━━━━━━",
                 "&7Countdown: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds",
                 "&7Cooldown: &f" + getConfig().getInt("cooldown-seconds", 30) + " seconds",
-                "&7Max attempts: &f" + getConfig().getInt("maximum-attempts", 20),
+                "&7Max attempts: &f" + getConfig().getInt("maximum-attempts", 30),
                 "&7Chunk loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
                 "&7Avoid water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
                 "",
@@ -659,7 +659,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&c−5 attempts per click"));
         inventory.setItem(30, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS",
                 "&8━━━━━━━━━━━━━━━━━━━━",
-                "&7Current value: &f" + getConfig().getInt("maximum-attempts", 20),
+                "&7Current value: &f" + getConfig().getInt("maximum-attempts", 30),
                 "&7Allowed range: &f1–200 attempts",
                 "&8Maximum candidate locations per request."));
         inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMORE ATTEMPTS",
@@ -1163,10 +1163,10 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("cooldown-seconds", 30);
         }
 
-        int attempts = getConfig().getInt("maximum-attempts", 20);
+        int attempts = getConfig().getInt("maximum-attempts", 30);
         if (attempts < 1 || attempts > 200) {
-            getLogger().warning("maximum-attempts must be between 1 and 200; using 20.");
-            getConfig().set("maximum-attempts", 20);
+            getLogger().warning("maximum-attempts must be between 1 and 200; using 30.");
+            getConfig().set("maximum-attempts", 30);
         }
 
         int minRadius = getConfig().getInt("minimum-radius", 100);
@@ -1222,10 +1222,10 @@ public final class RTP extends JavaPlugin implements Listener {
                     getConfig().set(base + "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
                 }
                 int worldAttempts = getConfig().getInt(base + "maximum-attempts",
-                        getConfig().getInt("maximum-attempts", 20));
+                        getConfig().getInt("maximum-attempts", 30));
                 if (worldAttempts < 1 || worldAttempts > 200) {
                     getLogger().warning("Invalid maximum-attempts for world '" + worldName + "'; using global value.");
-                    getConfig().set(base + "maximum-attempts", getConfig().getInt("maximum-attempts", 20));
+                    getConfig().set(base + "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
                 }
                 int worldTimeout = getConfig().getInt(base + "search-timeout-seconds",
                         getConfig().getInt("search-timeout-seconds", 20));
