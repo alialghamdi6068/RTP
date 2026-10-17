@@ -60,6 +60,18 @@ class RtpConfigTest {
     }
 
     @Test
+    void playerMenuAndPerWorldSettingsHaveSafeDefaults() {
+        YamlConfiguration config = loadDefaultConfig();
+        assertEquals(27, config.getInt("menu.size", 27));
+        assertEquals(11, config.getInt("menu.world-slots.world", 11));
+        assertEquals(13, config.getInt("menu.world-slots.world_nether", 13));
+        assertEquals(15, config.getInt("menu.world-slots.world_the_end", 15));
+        assertTrue(config.getConfigurationSection("world-settings") == null
+                || config.getConfigurationSection("world-settings").getKeys(false).isEmpty());
+        assertEquals(22, config.getInt("menu.close-slot", 22));
+    }
+
+    @Test
     void customWorldAreasDefaultToEmptyAndCanBeConfiguredPerWorld() {
         YamlConfiguration config = loadDefaultConfig();
 
