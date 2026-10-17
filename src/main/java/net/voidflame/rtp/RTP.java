@@ -1141,6 +1141,67 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("search-timeout-seconds", 20);
         }
 
+        var worldSettings = getConfig().getConfigurationSection("world-settings");
+        if (worldSettings != null) {
+            for (String worldName : worldSettings.getKeys(false)) {
+                String base = "world-settings." + worldName + ".";
+                int worldMinRadius = getConfig().getInt(base + "minimum-radius",
+                        getConfig().getInt("minimum-radius", 100));
+                int worldMaxRadius = getConfig().getInt(base + "maximum-radius",
+                        getConfig().getInt("maximum-radius", 5000));
+                if (worldMinRadius < 0 || worldMinRadius >= 30_000_000) {
+                    getLogger().warning("Invalid minimum-radius for world '" + worldName + "'; using global value.");
+                    getConfig().set(base + "minimum-radius", getConfig().getInt("minimum-radius", 100));
+                    worldMinRadius = getConfig().getInt(base + "minimum-radius");
+                }
+                if (worldMaxRadius <= worldMinRadius || worldMaxRadius > 30_000_000) {
+                    int fallbackMax = Math.min(30_000_000, Math.max(worldMinRadius + 1,
+                            getConfig().getInt("maximum-radius", 5000)));
+                    getLogger().warning("Invalid maximum-radius for world '" + worldName + "'; using " + fallbackMax + ".");
+                    getConfig().set(base + "maximum-radius", fallbackMax);
+                }
+
+                int worldCountdown = getConfig().getInt(base + "countdown-seconds",
+                        getConfig().getInt("countdown-seconds", 5));
+                if (worldCountdown < 1 || worldCountdown > 60) {
+                    getLogger().warning("Invalid countdown-seconds for world '" + worldName + "'; using global value.");
+                    getConfig().set(base + "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
+                }
+                long worldCooldown = getConfig().getLong(base + "cooldown-seconds",
+                        getConfig().getLong("cooldown-seconds", 30));
+                if (worldCooldown < 0 || worldCooldown > 86400) {
+                    getLogger().warning("Invalid cooldown-seconds for world '" + worldName + "'; using global value.");
+                    getConfig().set(base + "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
+                }
+                int worldAttempts = getConfig().getInt(base + "maximum-attempts",
+                        getConfig().getInt("maximum-attempts", 20));
+                if (worldAttempts < 1 || worldAttempts > 200) {
+                    getLogger().warning("Invalid maximum-attempts for world '" + worldName + "'; using global value.");
+                    getConfig().set(base + "maximum-attempts", getConfig().getInt("maximum-attempts", 20));
+                }
+                int worldTimeout = getConfig().getInt(base + "search-timeout-seconds",
+                        getConfig().getInt("search-timeout-seconds", 20));
+                if (worldTimeout < 5 || worldTimeout > 120) {
+                    getLogger().warning("Invalid search-timeout-seconds for world '" + worldName + "'; using global value.");
+                    getConfig().set(base + "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20));
+                }
+                World configuredWorld = Bukkit.getWorld(worldName);
+                if (configuredWorld != null) {
+                    int minY = getConfig().getInt(base + "minimum-y", configuredWorld.getMinHeight());
+                    int maxY = getConfig().getInt(base + "maximum-y", configuredWorld.getMaxHeight() - 2);
+                    if (minY < configuredWorld.getMinHeight() || minY > configuredWorld.getMaxHeight() - 2) {
+                        getLogger().warning("Invalid minimum-y for world '" + worldName + "'; using world minimum height.");
+                        getConfig().set(base + "minimum-y", configuredWorld.getMinHeight());
+                        minY = configuredWorld.getMinHeight();
+                    }
+                    if (maxY < minY || maxY > configuredWorld.getMaxHeight() - 2) {
+                        getLogger().warning("Invalid maximum-y for world '" + worldName + "'; using safe world ceiling.");
+                        getConfig().set(base + "maximum-y", Math.max(minY, configuredWorld.getMaxHeight() - 2));
+                    }
+                }
+            }
+        }
+
         var areas = getConfig().getConfigurationSection("world-areas");
         if (areas != null) {
             for (String worldName : areas.getKeys(false)) {
