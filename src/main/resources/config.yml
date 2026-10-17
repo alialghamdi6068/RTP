@@ -4,6 +4,7 @@
 world: ""
 allowed-worlds: []
 disabled-worlds: []
+world-settings: {}
 world-areas: {}
 minimum-radius: 100
 maximum-radius: 5000
