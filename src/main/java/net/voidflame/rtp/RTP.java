@@ -15,6 +15,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.Sound;
+import net.kyori.adventure.text.Component;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -38,6 +40,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
+    private static final String GUI_PLAYER_TITLE = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Random Teleport";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
     @Override
@@ -50,17 +53,24 @@ public final class RTP extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        countdowns.values().forEach(BukkitTask::cancel);
-        searchTimeouts.values().forEach(BukkitTask::cancel);
-        countdowns.clear();
-        searchTimeouts.clear();
-        searches.clear();
-    }
-
-    @Override
+        countdowns.values().f    @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!command.getName().equalsIgnoreCase("rtp")) return false;
+        String commandName = command.getName().toLowerCase(java.util.Locale.ROOT);
+        boolean adminCommand = commandName.equals("adminrtp");
+        if (!adminCommand && !commandName.equals("rtp")) return false;
 
+        if (adminCommand || (args.length == 1 && args[0].equalsIgnoreCase("admin"))) {
+            if (!sender.hasPermission("rtp.admin")) {
+                sender.sendMessage(message("no-permission"));
+                return true;
+            }
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(message("admin-gui-players-only"));
+                return true;
+            }
+            openMainGui(player);
+            return true;
+        }
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("rtp.admin")) {
                 sender.sendMessage(message("no-permission"));
@@ -71,7 +81,6 @@ public final class RTP extends JavaPlugin implements Listener {
             sender.sendMessage(message("reloaded"));
             return true;
         }
-
         if (args.length == 1 && (args[0].equalsIgnoreCase("gui") || args[0].equalsIgnoreCase("worlds"))) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(message("admin-gui-players-only"));
@@ -85,8 +94,7 @@ public final class RTP extends JavaPlugin implements Listener {
             else openMainGui(player);
             return true;
         }
-
-        if (args.length != 0) {
+        if (args.length > 1) {
             sender.sendMessage(message("usage"));
             return true;
         }
@@ -98,41 +106,111 @@ public final class RTP extends JavaPlugin implements Listener {
             player.sendMessage(message("no-permission"));
             return true;
         }
-
-        List<String> disabledWorlds = getConfig().getStringList("disabled-worlds");
-        if (disabledWorlds.contains(player.getWorld().getName())) {
-            player.sendMessage(message("world-disabled"));
+        if (args.length == 0) {
+            openPlayerGui(player);
             return true;
         }
-
-        if (countdowns.containsKey(player.getUniqueId())) {
-            player.sendMessage(message("already-counting"));
-            return true;
-        }
-
-        long cooldownSeconds = Math.max(0, getConfig().getLong("cooldown-seconds", 30));
-        long now = System.currentTimeMillis();
-        long lastUse = cooldowns.getOrDefault(player.getUniqueId(), 0L);
-        long remaining = cooldownSeconds - ((now - lastUse) / 1000L);
-        if (!player.hasPermission("rtp.bypasscooldown") && remaining > 0) {
-            player.sendMessage(message("cooldown").replace("%time%", String.valueOf(remaining)));
-            return true;
-        }
-
-        String configuredWorld = getConfig().getString("world", "").trim();
-        World world = configuredWorld.isEmpty() ? player.getWorld() : Bukkit.getWorld(configuredWorld);
-        if (world == null) {
+        World selectedWorld = Bukkit.getWorld(args[0]);
+        if (selectedWorld == null) {
             player.sendMessage(message("world-not-found"));
             return true;
         }
+        requestTeleport(player, selectedWorld);
+        return true;
+    }
+
+    private void requestTeleport(Player player, World world) {
+        if (!player.isOnline()) return;
+        List<String> disabledWorlds = getConfig().getStringList("disabled-worlds");
+        if (disabledWorlds.contains(player.getWorld().getName())) {
+            player.sendMessage(message("world-disabled"));
+            return;
+        }
         if (disabledWorlds.contains(world.getName())) {
             player.sendMessage(message("destination-world-disabled"));
-            return true;
+            return;
         }
         List<String> allowedWorlds = getConfig().getStringList("allowed-worlds");
         if (!allowedWorlds.isEmpty() && !allowedWorlds.contains(player.getWorld().getName())) {
             player.sendMessage(message("world-not-allowed"));
-            return true;
+            return;
+        }
+        UUID playerId = player.getUniqueId();
+        if (countdowns.containsKey(playerId) || searches.contains(playerId)) {
+            player.sendMessage(message("already-counting"));
+            return;
+        }
+        long cooldownSeconds = Math.max(0, getConfig().getLong("cooldown-seconds", 30));
+        long now = System.currentTimeMillis();
+        long lastUse = cooldowns.getOrDefault(playerId, 0L);
+        long remaining = cooldownSeconds - ((now - lastUse) / 1000L);
+        if (!player.hasPermission("rtp.bypasscooldown") && remaining > 0) {
+            player.sendMessage(message("cooldown").replace("%time%", String.valueOf(remaining)));
+            return;
+        }
+        if (!player.hasPermission("rtp.bypasscooldown")) cooldowns.put(playerId, now);
+        player.closeInventory();
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.15f);
+        startCountdown(player, world);
+    }
+
+    private List<World> getSelectableWorlds() {
+        List<World> selectable = new ArrayList<>();
+        List<String> disabled = getConfig().getStringList("disabled-worlds");
+        for (String name : List.of("world", "world_nether", "world_the_end")) {
+            World world = Bukkit.getWorld(name);
+            if (world != null && !disabled.contains(name)) selectable.add(world);
+        }
+        for (World world : Bukkit.getWorlds()) {
+            if (!disabled.contains(world.getName())
+                    && selectable.stream().noneMatch(existing -> existing.getName().equals(world.getName()))) {
+                selectable.add(world);
+            }
+        }
+        return selectable;
+    }
+
+    private void openPlayerGui(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, GUI_PLAYER_TITLE);
+        fillGui(inventory);
+        inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Choose your destination.",
+                "&7A safe random location will be selected.",
+                "",
+                "&fSelect a world below."));
+        int[] slots = {11, 13, 15};
+        Map<String, Material> icons = Map.of(
+                "world", Material.GRASS_BLOCK,
+                "world_nether", Material.NETHERRACK,
+                "world_the_end", Material.END_STONE);
+        Map<String, String> names = Map.of(
+                "world", "Overworld",
+                "world_nether", "Nether",
+                "world_the_end", "The End");
+        List<World> selectable = getSelectableWorlds();
+        for (int i = 0; i < Math.min(slots.length, selectable.size()); i++) {
+            World world = selectable.get(i);
+            String name = names.getOrDefault(world.getName(), world.getName());
+            Material icon = icons.getOrDefault(world.getName(),
+                    world.getEnvironment() == World.Environment.NETHER ? Material.NETHERRACK
+                    : world.getEnvironment() == World.Environment.THE_END ? Material.END_STONE : Material.GRASS_BLOCK);
+            inventory.setItem(slots[i], guiItem(icon, "&a&l" + name,
+                    "&8━━━━━━━━━━━━━━━━━━━━",
+                    "&7World: &f" + world.getName(),
+                    "&7Players online: &f" + world.getPlayers().size(),
+                    "&7Search radius: &f" + getConfig().getInt("minimum-radius", 100) + "–"
+                            + getConfig().getInt("maximum-radius", 5000) + " blocks",
+                    "&7Cooldown: &f" + getConfig().getLong("cooldown-seconds", 30) + "s",
+                    "",
+                    "&a▶ Click to teleport"));
+        }
+        inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE MENU", "&7Close this menu."));
+        player.openInventory(inventory);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.6f, 1.1f);
+    }
+
+rue;
         }
 
         if (!player.hasPermission("rtp.bypasscooldown")) cooldowns.put(player.getUniqueId(), now);
@@ -144,6 +222,8 @@ public final class RTP extends JavaPlugin implements Listener {
         UUID id = player.getUniqueId();
         int seconds = Math.max(1, getConfig().getInt("countdown-seconds", 5));
         player.sendMessage(message("countdown-start").replace("%time%", String.valueOf(seconds)));
+        player.sendActionBar(Component.text("Random teleport in " + seconds + "s"));
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
         final int[] remaining = {seconds};
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(this, () -> {
             if (!player.isOnline() || !countdowns.containsKey(id)) {
@@ -159,6 +239,8 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             remaining[0]--;
             player.sendMessage(message("countdown-tick").replace("%time%", String.valueOf(remaining[0])));
+            player.sendActionBar(Component.text("Random teleport in " + remaining[0] + "s"));
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.45f, 1.0f + (seconds - remaining[0]) * 0.08f);
         }, 20L, 20L);
         countdowns.put(id, task);
     }
@@ -176,6 +258,8 @@ public final class RTP extends JavaPlugin implements Listener {
             task.cancel();
             // A cancelled countdown did not perform a teleport, so do not charge the cooldown.
             cooldowns.remove(playerId);
+            event.getPlayer().sendActionBar(Component.text("Random teleport cancelled"));
+            event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.8f);
             event.getPlayer().sendMessage(message("countdown-cancelled"));
         }
     }
@@ -354,6 +438,8 @@ public final class RTP extends JavaPlugin implements Listener {
                             sendRtpMessage(player, "failed");
                             return;
                         }
+                        player.sendActionBar(Component.text("Teleported successfully"));
+                        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 1.0f);
                         player.sendMessage(message("success")
                                 .replace("%x%", String.valueOf(destination.getBlockX()))
                                 .replace("%y%", String.valueOf(destination.getBlockY()))
@@ -600,6 +686,28 @@ public final class RTP extends JavaPlugin implements Listener {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    @EventHandler
+    public void onPlayerRtpMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!event.getView().getTitle().equals(GUI_PLAYER_TITLE)) return;
+        event.setCancelled(true);
+        int slot = event.getRawSlot();
+        if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+        if (slot == 22) {
+            player.closeInventory();
+            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 0.5f, 1.0f);
+            return;
+        }
+        int[] slots = {11, 13, 15};
+        for (int i = 0; i < slots.length; i++) {
+            if (slot == slots[i]) {
+                List<World> worlds = getSelectableWorlds();
+                if (i < worlds.size()) requestTeleport(player, worlds.get(i));
+                return;
+            }
+        }
     }
 
     @EventHandler
