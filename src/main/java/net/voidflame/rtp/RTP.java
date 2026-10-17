@@ -41,6 +41,8 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
     private static final String GUI_PLAYER_TITLE = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "Random Teleport";
+    private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World";
+    private static final String GUI_WORLD_SETTINGS_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "World RTP | ";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
     @Override
@@ -498,6 +500,12 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Avoid water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
                 "",
                 "&b▶ &fClick to edit settings"));
+        inventory.setItem(19, guiItem(Material.COMPARATOR, "&d&lPER-WORLD SETTINGS",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Configure each world independently.",
+                "&7Radius, height, cooldown and countdown.",
+                "",
+                "&d▶ Click to select a world"));
         inventory.setItem(16, guiItem(Material.WRITABLE_BOOK, "&e&lRELOAD CONFIGURATION",
                 "&8━━━━━━━━━━━━━━━━━━━━",
                 "&7Reload config.yml from disk.",
@@ -683,6 +691,109 @@ public final class RTP extends JavaPlugin implements Listener {
         player.openInventory(inventory);
     }
 
+    private void openWorldSettingsSelector(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SETTINGS_SELECT_TITLE);
+        fillGui(inventory);
+        inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lPER-WORLD RTP SETTINGS",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7Select a loaded world to edit its RTP settings.",
+                "&7Changes save automatically to config.yml."));
+        List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+        int limit = Math.min(45, worlds.size());
+        for (int i = 0; i < limit; i++) {
+            World world = worlds.get(i);
+            boolean enabled = isWorldRtpEnabled(world) && !getConfig().getStringList("disabled-worlds").contains(world.getName());
+            inventory.setItem(i, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+                    (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
+                    "&8━━━━━━━━━━━━━━━━━━━━",
+                    "&7Environment: &f" + world.getEnvironment().name(),
+                    "&7Radius: &f" + worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100))
+                            + "–" + worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)),
+                    "&7Countdown: &f" + worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + "s",
+                    "",
+                    "&d▶ Click to edit this world"));
+        }
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
+        player.openInventory(inventory);
+    }
+
+    private void openWorldSettingsGui(Player player, World world) {
+        String title = GUI_WORLD_SETTINGS_PREFIX + world.getName();
+        Inventory inventory = Bukkit.createInventory(null, 54, title);
+        fillGui(inventory);
+        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
+        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
+        int minY = worldInt(world, "minimum-y", world.getMinHeight());
+        int maxY = worldInt(world, "maximum-y", world.getMaxHeight() - 2);
+        int countdown = worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
+        long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
+        int attempts = worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
+        boolean enabled = isWorldRtpEnabled(world);
+        inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lWORLD SETTINGS",
+                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&7World: &f" + world.getName(),
+                "&7Environment: &f" + world.getEnvironment().name(),
+                "&7Values inherited from global config are shown as effective values.",
+                "",
+                "&aChanges save automatically."));
+        inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lMIN RADIUS -100", "&7Decrease minimum RTP radius."));
+        inventory.setItem(11, guiItem(Material.MAP, "&b&lMINIMUM RADIUS", "&7Current: &f" + minRadius, "&7Must stay below maximum radius."));
+        inventory.setItem(12, guiItem(Material.LIME_DYE, "&a&lMIN RADIUS +100", "&7Increase minimum RTP radius."));
+        inventory.setItem(14, guiItem(Material.RED_DYE, "&c&lMAX RADIUS -500", "&7Decrease maximum RTP radius."));
+        inventory.setItem(15, guiItem(Material.MAP, "&b&lMAXIMUM RADIUS", "&7Current: &f" + maxRadius, "&7Maximum supported: 30,000,000."));
+        inventory.setItem(16, guiItem(Material.LIME_DYE, "&a&lMAX RADIUS +500", "&7Increase maximum RTP radius."));
+        inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lCOUNTDOWN -1", "&7Current: &f" + countdown + "s"));
+        inventory.setItem(20, guiItem(Material.CLOCK, "&b&lCOUNTDOWN", "&7Current: &f" + countdown + "s", "&7Range: 1–60 seconds."));
+        inventory.setItem(21, guiItem(Material.LIME_DYE, "&a&lCOUNTDOWN +1", "&7Increase countdown."));
+        inventory.setItem(23, guiItem(Material.RED_DYE, "&c&lCOOLDOWN -5", "&7Current: &f" + cooldown + "s"));
+        inventory.setItem(24, guiItem(Material.CLOCK, "&b&lCOOLDOWN", "&7Current: &f" + cooldown + "s", "&7Range: 0–86400 seconds."));
+        inventory.setItem(25, guiItem(Material.LIME_DYE, "&a&lCOOLDOWN +5", "&7Increase cooldown."));
+        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lMIN Y -10", "&7Current: &f" + minY));
+        inventory.setItem(29, guiItem(Material.IRON_PICKAXE, "&b&lMINIMUM Y", "&7Current: &f" + minY, "&7World floor: " + world.getMinHeight()));
+        inventory.setItem(30, guiItem(Material.LIME_DYE, "&a&lMIN Y +10", "&7Increase minimum accepted height."));
+        inventory.setItem(32, guiItem(Material.RED_DYE, "&c&lMAX Y -10", "&7Current: &f" + maxY));
+        inventory.setItem(33, guiItem(Material.IRON_PICKAXE, "&b&lMAXIMUM Y", "&7Current: &f" + maxY, "&7World ceiling: " + (world.getMaxHeight() - 2)));
+        inventory.setItem(34, guiItem(Material.LIME_DYE, "&a&lMAX Y +10", "&7Increase maximum accepted height."));
+        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lATTEMPTS -5", "&7Current: &f" + attempts));
+        inventory.setItem(38, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS", "&7Current: &f" + attempts, "&7Range: 1–200."));
+        inventory.setItem(39, guiItem(Material.LIME_DYE, "&a&lATTEMPTS +5", "&7Increase search attempts."));
+        inventory.setItem(41, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+                enabled ? "&a&lWORLD RTP: ENABLED" : "&c&lWORLD RTP: DISABLED",
+                "&7Toggle whether this world is available in /rtp.",
+                "&e▶ Click to toggle"));
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lBACK TO WORLD LIST", "&7Select another world."));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
+        player.openInventory(inventory);
+    }
+
+    private void adjustWorldSetting(Player player, World world, int slot) {
+        String base = "world-settings." + world.getName() + ".";
+        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
+        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
+        int minY = worldInt(world, "minimum-y", world.getMinHeight());
+        int maxY = worldInt(world, "maximum-y", world.getMaxHeight() - 2);
+        switch (slot) {
+            case 10 -> getConfig().set(base + "minimum-radius", Math.max(0, Math.min(minRadius - 100, maxRadius - 1)));
+            case 12 -> getConfig().set(base + "minimum-radius", Math.max(0, Math.min(maxRadius - 1, minRadius + 100)));
+            case 14 -> getConfig().set(base + "maximum-radius", Math.max(minRadius + 1, maxRadius - 500));
+            case 16 -> getConfig().set(base + "maximum-radius", Math.min(30_000_000, maxRadius + 500));
+            case 19 -> getConfig().set(base + "countdown-seconds", Math.max(1, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) - 1));
+            case 21 -> getConfig().set(base + "countdown-seconds", Math.min(60, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + 1));
+            case 23 -> getConfig().set(base + "cooldown-seconds", Math.max(0, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) - 5));
+            case 25 -> getConfig().set(base + "cooldown-seconds", Math.min(86400, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) + 5));
+            case 28 -> getConfig().set(base + "minimum-y", Math.max(world.getMinHeight(), minY - 10));
+            case 30 -> getConfig().set(base + "minimum-y", Math.min(maxY, minY + 10));
+            case 32 -> getConfig().set(base + "maximum-y", Math.max(minY, maxY - 10));
+            case 34 -> getConfig().set(base + "maximum-y", Math.min(world.getMaxHeight() - 2, maxY + 10));
+            case 37 -> getConfig().set(base + "maximum-attempts", Math.max(1, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) - 5));
+            case 39 -> getConfig().set(base + "maximum-attempts", Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) + 5));
+            case 41 -> getConfig().set(base + "enabled", !isWorldRtpEnabled(world));
+            default -> { return; }
+        }
+        saveConfig();
+        openWorldSettingsGui(player, world);
+    }
+
     private void fillGui(Inventory inventory) {
         ItemStack darkFiller = guiItem(Material.BLACK_STAINED_GLASS_PANE, " ");
         ItemStack accentFiller = guiItem(Material.PURPLE_STAINED_GLASS_PANE, " ");
@@ -747,6 +858,8 @@ public final class RTP extends JavaPlugin implements Listener {
                 openWorldGui(player, 0);
             } else if (slot == 13) {
                 openSettingsGui(player);
+            } else if (slot == 19) {
+                openWorldSettingsSelector(player);
             } else if (slot == 16) {
                 reloadConfig();
                 validateConfig();
@@ -778,6 +891,30 @@ public final class RTP extends JavaPlugin implements Listener {
             } else {
                 adjustSetting(player, settingsSlot);
             }
+            return;
+        }
+        if (title.equals(GUI_WORLD_SETTINGS_SELECT_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            if (slot == 49) { openMainGui(player); return; }
+            if (slot >= 45) return;
+            List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+            if (slot < worlds.size()) openWorldSettingsGui(player, worlds.get(slot));
+            return;
+        }
+        if (title.startsWith(GUI_WORLD_SETTINGS_PREFIX)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            String worldName = title.substring(GUI_WORLD_SETTINGS_PREFIX.length());
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            if (slot == 45) { openWorldSettingsSelector(player); return; }
+            if (slot == 49) { openMainGui(player); return; }
+            adjustWorldSetting(player, world, slot);
             return;
         }
         if (!title.startsWith(GUI_PREFIX)) return;
