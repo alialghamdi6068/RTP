@@ -211,9 +211,11 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7A safe random location will be selected.",
                 "",
                 "&fSelect a world below."));
-        int[] slots = {getConfig().getInt("menu.world-slots.world", 11),
-                getConfig().getInt("menu.world-slots.world_nether", 13),
-                getConfig().getInt("menu.world-slots.world_the_end", 15)};
+        int[] slots = {
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world", 11))),
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_nether", 13))),
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_the_end", 15)))
+        };
         Map<String, Material> icons = Map.of(
                 "world", Material.GRASS_BLOCK,
                 "world_nether", Material.NETHERRACK,
@@ -835,14 +837,19 @@ public final class RTP extends JavaPlugin implements Listener {
         event.setCancelled(true);
         int slot = event.getRawSlot();
         if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
-        if (slot == getConfig().getInt("menu.close-slot", 22)) {
+        int configuredCloseSlot = Math.max(0, Math.min(event.getView().getTopInventory().getSize() - 1,
+                getConfig().getInt("menu.close-slot", 22)));
+        if (slot == configuredCloseSlot) {
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 0.5f, 1.0f);
             return;
         }
-        int[] slots = {getConfig().getInt("menu.world-slots.world", 11),
-                getConfig().getInt("menu.world-slots.world_nether", 13),
-                getConfig().getInt("menu.world-slots.world_the_end", 15)};
+        int menuSize = event.getView().getTopInventory().getSize();
+        int[] slots = {
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world", 11))),
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_nether", 13))),
+                Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.world-slots.world_the_end", 15)))
+        };
         for (int i = 0; i < slots.length; i++) {
             if (slot == slots[i]) {
                 List<World> worlds = getSelectableWorlds();
