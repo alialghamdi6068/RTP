@@ -16,7 +16,8 @@ search-timeout-seconds: 20
 load-chunks: false
 avoid-water: true
 
-# Player menu defaults: the three standard dimensions are displayed when loaded.
+# Player menu defaults: standard dimensions appear first, followed by other eligible loaded worlds.
+# The player selector automatically paginates when more worlds are available than fit on one page.
 menu:
   title: "&8&lRandom Teleport"
   size: 27
