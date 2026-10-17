@@ -53,7 +53,15 @@ public final class RTP extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        countdowns.values().f    @Override
+        countdowns.values().forEach(BukkitTask::cancel);
+        searchTimeouts.values().forEach(BukkitTask::cancel);
+        countdowns.clear();
+        searchTimeouts.clear();
+        searches.clear();
+        searchTokens.clear();
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String commandName = command.getName().toLowerCase(java.util.Locale.ROOT);
         boolean adminCommand = commandName.equals("adminrtp");
@@ -225,14 +233,6 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE MENU", "&7Close this menu."));
         player.openInventory(inventory);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.6f, 1.1f);
-    }
-
-rue;
-        }
-
-        if (!player.hasPermission("rtp.bypasscooldown")) cooldowns.put(player.getUniqueId(), now);
-        startCountdown(player, world);
-        return true;
     }
 
     private void startCountdown(Player player, World world) {
