@@ -20,7 +20,7 @@ avoid-water: true
 # Supported sizes are 27 or 54 only; other values reset to 27 to preserve pagination slots.
 # The player selector automatically paginates when more worlds are available than fit on one page.
 menu:
-  title: "&8RTP Menu"
+  title: "&8&lRTP"
   size: 27
   filler: true
   close-slot: 22
