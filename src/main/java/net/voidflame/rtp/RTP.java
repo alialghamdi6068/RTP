@@ -394,7 +394,34 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void startTeleportSearch(Player player, World world) {
-        if (!player.isOnline() || !searches.add(player.getUniqueId())) return;
+        if (!player.isOnline()) return;
+
+        // Revalidate the request after the countdown: administrators may have changed
+        // world availability or configuration while the player was waiting.
+        World loadedWorld = Bukkit.getWorld(world.getUID());
+        if (loadedWorld == null || !loadedWorld.equals(world)) {
+            sendRtpMessage(player, "world-not-found");
+            return;
+        }
+        List<String> disabledWorlds = getConfig().getStringList("disabled-worlds");
+        if (disabledWorlds.contains(player.getWorld().getName())) {
+            sendRtpMessage(player, "world-disabled");
+            return;
+        }
+        if (disabledWorlds.contains(world.getName()) || !isWorldRtpEnabled(world)) {
+            sendRtpMessage(player, "destination-world-disabled");
+            return;
+        }
+        List<String> allowedWorlds = getConfig().getStringList("allowed-worlds");
+        if (!allowedWorlds.isEmpty() && !allowedWorlds.contains(player.getWorld().getName())) {
+            sendRtpMessage(player, "world-not-allowed");
+            return;
+        }
+        if (!player.hasPermission("rtp.use")) {
+            sendRtpMessage(player, "no-permission");
+            return;
+        }
+        if (!searches.add(player.getUniqueId())) return;
         UUID playerId = player.getUniqueId();
         UUID searchToken = UUID.randomUUID();
         searchTokens.put(playerId, searchToken);
