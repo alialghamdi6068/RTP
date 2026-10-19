@@ -276,10 +276,8 @@ public final class RTP extends JavaPlugin implements Listener {
         int menuSize = configuredMenuSize == 54 ? 54 : 27;
         Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(Math.max(0, requestedPage)));
         if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-        // Keep the player-facing selector close to the familiar Donut-style layout:
-        // concise title, three centered dimension buttons, and minimal item lore.
-        inventory.setItem(4, guiItem(Material.COMPASS, "&f&lChoose a destination",
-                "&7Select where you want to randomly teleport."));
+        // Keep the player-facing selector minimal: the inventory title labels the menu,
+        // and the dimension buttons carry the useful destination details.
 
         List<World> selectable = getSelectableWorlds();
         List<Integer> slots = playerWorldMenuSlots(menuSize);
@@ -290,8 +288,6 @@ public final class RTP extends JavaPlugin implements Listener {
         if (page != Math.max(0, requestedPage)) {
             inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(page));
             if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-            inventory.setItem(4, guiItem(Material.COMPASS, "&f&lChoose a destination",
-                    "&7Select where you want to randomly teleport."));
         }
 
         for (int i = 0; i < pageSize; i++) {
