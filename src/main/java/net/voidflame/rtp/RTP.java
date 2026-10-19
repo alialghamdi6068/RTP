@@ -371,8 +371,12 @@ public final class RTP extends JavaPlugin implements Listener {
         if (event.getTo() == null) return;
         Location from = event.getFrom();
         Location to = event.getTo();
-        if (from.getWorld().equals(to.getWorld()) && from.getBlockX() == to.getBlockX()
-                && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) return;
+        // Cancel for any actual positional movement, including movement within a block.
+        // Looking around alone does not cancel the countdown.
+        if (from.getWorld().equals(to.getWorld())
+                && Double.compare(from.getX(), to.getX()) == 0
+                && Double.compare(from.getY(), to.getY()) == 0
+                && Double.compare(from.getZ(), to.getZ()) == 0) return;
         UUID playerId = event.getPlayer().getUniqueId();
         BukkitTask task = countdowns.remove(playerId);
         if (task != null) {
