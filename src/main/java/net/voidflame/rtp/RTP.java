@@ -581,16 +581,16 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openMainGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 27, GUI_MAIN_TITLE);
         fillGui(inventory);
-        inventory.setItem(2, guiItem(Material.AMETHYST_SHARD, "&5&lVOIDFLAME RTP",
+        inventory.setItem(2, guiItem(Material.AMETHYST_SHARD, "&6&lVOIDFLAME RTP",
                 "&8&m━━━━━━━━━━━━━━━━━━━━", "&7ADMINISTRATOR CONSOLE",
                 "&7Control the random teleport experience."));
-        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&d&lCONTROL CENTER",
+        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&6&lCONTROL CENTER",
                 "&8&m━━━━━━━━━━━━━━━━━━━━",
                 "&7Manage your RTP network from one place.",
                 "&7Changes are saved automatically.",
                 "",
-                "&d✦ &fChoose a module below."));
-        inventory.setItem(6, guiItem(Material.END_CRYSTAL, "&b&lLIVE OVERVIEW",
+                "&6✦ &fChoose a module below."));
+        inventory.setItem(6, guiItem(Material.END_CRYSTAL, "&f&lLIVE OVERVIEW",
                 "&8&m━━━━━━━━━━━━━━━━━━━━", "&7Loaded worlds: &f" + Bukkit.getWorlds().size(),
                 "&7Active searches: &f" + searches.size(),
                 "&7System status: &aOperational"));
@@ -600,7 +600,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 "",
                 "&7Loaded worlds: &f" + Bukkit.getWorlds().size(),
                 "&a✦ &fOpen world controls"));
-        inventory.setItem(13, guiItem(Material.CLOCK, "&b&lGLOBAL SETTINGS",
+        inventory.setItem(13, guiItem(Material.CLOCK, "&f&lGLOBAL SETTINGS",
                 "&8&m━━━━━━━━━━━━━━━━━━━━",
                 "&7Countdown: &f" + getConfig().getInt("countdown-seconds", 5) + "s",
                 "&7Cooldown: &f" + getConfig().getInt("cooldown-seconds", 30) + "s",
@@ -608,13 +608,13 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Chunk loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
                 "&7Water avoidance: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
                 "",
-                "&b✦ &fConfigure global behavior"));
-        inventory.setItem(19, guiItem(Material.COMPARATOR, "&d&lWORLD PROFILES",
+                "&b◆ &fConfigure global behavior"));
+        inventory.setItem(19, guiItem(Material.COMPARATOR, "&6&lWORLD PROFILES",
                 "&8&m━━━━━━━━━━━━━━━━━━━━",
                 "&7Customize each world separately.",
                 "&7Radius, height, cooldown and timing.",
                 "",
-                "&d✦ &fChoose a world profile"));
+                "&6✦ &fChoose a world profile"));
         inventory.setItem(16, guiItem(Material.WRITABLE_BOOK, "&e&lRELOAD CONFIG",
                 "&8&m━━━━━━━━━━━━━━━━━━━━",
                 "&7Load config.yml from disk again.",
@@ -629,8 +629,8 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openSettingsGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_SETTINGS_TITLE);
         fillGui(inventory);
-        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&d&lRTP SETTINGS",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&6&lRTP SETTINGS",
+                "&8&m--------------------",
                 "&7Fine-tune RTP behavior and safety.",
                 "&7Changes save automatically to config.yml.",
                 "",
@@ -639,8 +639,8 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lDECREASE COUNTDOWN",
                 "&7Shorten the pre-teleport countdown.",
                 "&c−1 second per click"));
-        inventory.setItem(12, guiItem(Material.CLOCK, "&b&lCOUNTDOWN",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(12, guiItem(Material.CLOCK, "&f&lCOUNTDOWN",
+                "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds",
                 "&7Allowed range: &f1–60 seconds",
                 "&8Time before teleport begins."));
@@ -651,8 +651,8 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lDECREASE COOLDOWN",
                 "&7Reduce the wait between RTP uses.",
                 "&c−5 seconds per click"));
-        inventory.setItem(21, guiItem(Material.CLOCK, "&b&lCOOLDOWN",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(21, guiItem(Material.CLOCK, "&f&lCOOLDOWN",
+                "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("cooldown-seconds", 30) + " seconds",
                 "&7Allowed range: &f0–86400 seconds",
                 "&8Set to 0 to disable cooldown."));
@@ -663,8 +663,8 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFEWER ATTEMPTS",
                 "&7Try fewer candidate locations per request.",
                 "&c−5 attempts per click"));
-        inventory.setItem(30, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(30, guiItem(Material.PAPER, "&f&lMAXIMUM ATTEMPTS",
+                "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("maximum-attempts", 30),
                 "&7Allowed range: &f1–200 attempts",
                 "&8Maximum candidate locations per request."));
@@ -675,8 +675,8 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFEWER SEARCHES",
                 "&7Lower the number of searches allowed at once.",
                 "&c−5 searches per click"));
-        inventory.setItem(39, guiItem(Material.BOOK, "&b&lCONCURRENT SEARCHES",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(39, guiItem(Material.BOOK, "&f&lCONCURRENT SEARCHES",
+                "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("maximum-active-searches", 25),
                 "&7Allowed range: &f1–500 searches",
                 "&8Limits simultaneous RTP searches."));
@@ -687,8 +687,8 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(46, guiItem(Material.RED_DYE, "&c&lSHORTER TIMEOUT",
                 "&7Stop stalled searches sooner.",
                 "&c−5 seconds per click"));
-        inventory.setItem(48, guiItem(Material.CLOCK, "&b&lSEARCH TIMEOUT",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(48, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT",
+                "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds",
                 "&7Allowed range: &f5–120 seconds",
                 "&8Maximum time allowed for a search."));
@@ -696,25 +696,25 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Allow searches more time to finish.",
                 "&a+5 seconds per click"));
         inventory.setItem(43, guiItem(getConfig().getBoolean("load-chunks", false) ? Material.LIME_DYE : Material.GRAY_DYE,
-                "&b&lChunk Loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
-                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&f&lChunk Loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
+                "&8&m--------------------",
                 "&7Permit asynchronous loading or generation",
                 "&7of destination chunks when required.",
                 getConfig().getBoolean("load-chunks", false) ? "&aCurrently ON" : "&cCurrently OFF",
                 "",
                 "&e▶ Click to toggle"));
         inventory.setItem(44, guiItem(getConfig().getBoolean("avoid-water", true) ? Material.LIME_DYE : Material.GRAY_DYE,
-                "&b&lAvoid Water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
-                "&8━━━━━━━━━━━━━━━━━━━━",
+                "&f&lAvoid Water: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
+                "&8&m--------------------",
                 "&7Reject water and bubble columns when",
                 "&7checking candidate destinations.",
                 getConfig().getBoolean("avoid-water", true) ? "&aCurrently ON" : "&cCurrently OFF",
                 "",
                 "&e▶ Click to toggle"));
-        inventory.setItem(52, guiItem(Material.OAK_DOOR, "&d&lBACK TO MENU",
+        inventory.setItem(52, guiItem(Material.OAK_DOOR, "&6&lBACK TO MENU",
                 "&7Return to the RTP Control Center.",
                 "",
-                "&d▶ Click to go back"));
+                "&6▶ Click to go back"));
         player.openInventory(inventory);
     }
 
@@ -771,7 +771,7 @@ public final class RTP extends JavaPlugin implements Listener {
             Material icon = enabled ? Material.LIME_DYE : Material.GRAY_DYE;
             inventory.setItem(i - start, guiItem(icon,
                     (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
-                    "&8━━━━━━━━━━━━━━━━━━━━",
+                    "&8&m--------------------",
                     "&7RTP Status: " + (enabled ? "&aEnabled" : "&cDisabled"),
                     "&7Environment: &f" + world.getEnvironment().name(),
                     "&7Players online: &f" + world.getPlayers().size(),
@@ -783,15 +783,15 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE",
                 "&7Browse the previous page of worlds.",
                 page > 0 ? "&e▶ Click to go back" : "&8You are on the first page"));
-        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER",
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER",
                 "&7Return to the RTP main menu.",
                 "",
-                "&d▶ Click to go back"));
+                "&6▶ Click to go back"));
         inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE",
                 "&7Browse the next page of worlds.",
                 page < maxPage ? "&e▶ Click to continue" : "&8You are on the last page"));
-        inventory.setItem(48, guiItem(Material.BOOK, "&b&lPAGE INFORMATION",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(48, guiItem(Material.BOOK, "&f&lPAGE INFORMATION",
+                "&8&m--------------------",
                 "&7Page: &f" + (page + 1) + " &8/ &f" + (maxPage + 1),
                 "&7Loaded worlds: &f" + worlds.size(),
                 "",
@@ -810,8 +810,8 @@ public final class RTP extends JavaPlugin implements Listener {
         int page = Math.max(0, Math.min(requestedPage, maxPage));
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SETTINGS_SELECT_TITLE + (page + 1));
         fillGui(inventory);
-        inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lPER-WORLD RTP SETTINGS",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(4, guiItem(Material.COMPARATOR, "&6&lPER-WORLD RTP SETTINGS",
+                "&8&m--------------------",
                 "&7Select a loaded world to edit its RTP settings.",
                 "&7Changes save automatically to config.yml.",
                 "",
@@ -826,17 +826,17 @@ public final class RTP extends JavaPlugin implements Listener {
                     && !getConfig().getStringList("disabled-worlds").contains(world.getName());
             inventory.setItem(slot, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
                     (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
-                    "&8━━━━━━━━━━━━━━━━━━━━",
+                    "&8&m--------------------",
                     "&7Environment: &f" + world.getEnvironment().name(),
                     "&7Radius: &f" + worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100))
                             + "–" + worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)),
                     "&7Countdown: &f" + worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + "s",
                     "",
-                    "&d▶ Click to edit this world"));
+                    "&6▶ Click to edit this world"));
         }
         inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE",
                 page > 0 ? "&7Go to page " + page : "&8You are on the first page"));
-        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
         inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE",
                 page < maxPage ? "&7Go to page " + (page + 2) : "&8You are on the last page"));
         player.openInventory(inventory);
@@ -854,44 +854,44 @@ public final class RTP extends JavaPlugin implements Listener {
         int attempts = worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
         boolean enabled = isWorldRtpEnabled(world)
                 && !getConfig().getStringList("disabled-worlds").contains(world.getName());
-        inventory.setItem(4, guiItem(Material.COMPARATOR, "&d&lWORLD SETTINGS",
-                "&8━━━━━━━━━━━━━━━━━━━━",
+        inventory.setItem(4, guiItem(Material.COMPARATOR, "&6&lWORLD SETTINGS",
+                "&8&m--------------------",
                 "&7World: &f" + world.getName(),
                 "&7Environment: &f" + world.getEnvironment().name(),
                 "&7Values inherited from global config are shown as effective values.",
                 "",
                 "&aChanges save automatically."));
         inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lMIN RADIUS -100", "&7Decrease minimum RTP radius."));
-        inventory.setItem(11, guiItem(Material.MAP, "&b&lMINIMUM RADIUS", "&7Current: &f" + minRadius, "&7Must stay below maximum radius."));
+        inventory.setItem(11, guiItem(Material.MAP, "&f&lMINIMUM RADIUS", "&7Current: &f" + minRadius, "&7Must stay below maximum radius."));
         inventory.setItem(12, guiItem(Material.LIME_DYE, "&a&lMIN RADIUS +100", "&7Increase minimum RTP radius."));
         inventory.setItem(14, guiItem(Material.RED_DYE, "&c&lMAX RADIUS -500", "&7Decrease maximum RTP radius."));
-        inventory.setItem(15, guiItem(Material.MAP, "&b&lMAXIMUM RADIUS", "&7Current: &f" + maxRadius, "&7Maximum supported: 30,000,000."));
+        inventory.setItem(15, guiItem(Material.MAP, "&f&lMAXIMUM RADIUS", "&7Current: &f" + maxRadius, "&7Maximum supported: 30,000,000."));
         inventory.setItem(16, guiItem(Material.LIME_DYE, "&a&lMAX RADIUS +500", "&7Increase maximum RTP radius."));
         inventory.setItem(19, guiItem(Material.RED_DYE, "&c&lCOUNTDOWN -1", "&7Current: &f" + countdown + "s"));
-        inventory.setItem(20, guiItem(Material.CLOCK, "&b&lCOUNTDOWN", "&7Current: &f" + countdown + "s", "&7Range: 1–60 seconds."));
+        inventory.setItem(20, guiItem(Material.CLOCK, "&f&lCOUNTDOWN", "&7Current: &f" + countdown + "s", "&7Range: 1–60 seconds."));
         inventory.setItem(21, guiItem(Material.LIME_DYE, "&a&lCOUNTDOWN +1", "&7Increase countdown."));
         inventory.setItem(23, guiItem(Material.RED_DYE, "&c&lCOOLDOWN -5", "&7Current: &f" + cooldown + "s"));
-        inventory.setItem(24, guiItem(Material.CLOCK, "&b&lCOOLDOWN", "&7Current: &f" + cooldown + "s", "&7Range: 0–86400 seconds."));
+        inventory.setItem(24, guiItem(Material.CLOCK, "&f&lCOOLDOWN", "&7Current: &f" + cooldown + "s", "&7Range: 0–86400 seconds."));
         inventory.setItem(25, guiItem(Material.LIME_DYE, "&a&lCOOLDOWN +5", "&7Increase cooldown."));
         inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lMIN Y -10", "&7Current: &f" + minY));
-        inventory.setItem(29, guiItem(Material.IRON_PICKAXE, "&b&lMINIMUM Y", "&7Current: &f" + minY, "&7World floor: " + world.getMinHeight()));
+        inventory.setItem(29, guiItem(Material.IRON_PICKAXE, "&f&lMINIMUM Y", "&7Current: &f" + minY, "&7World floor: " + world.getMinHeight()));
         inventory.setItem(30, guiItem(Material.LIME_DYE, "&a&lMIN Y +10", "&7Increase minimum accepted height."));
         inventory.setItem(32, guiItem(Material.RED_DYE, "&c&lMAX Y -10", "&7Current: &f" + maxY));
-        inventory.setItem(33, guiItem(Material.IRON_PICKAXE, "&b&lMAXIMUM Y", "&7Current: &f" + maxY, "&7World ceiling: " + (world.getMaxHeight() - 2)));
+        inventory.setItem(33, guiItem(Material.IRON_PICKAXE, "&f&lMAXIMUM Y", "&7Current: &f" + maxY, "&7World ceiling: " + (world.getMaxHeight() - 2)));
         inventory.setItem(34, guiItem(Material.LIME_DYE, "&a&lMAX Y +10", "&7Increase maximum accepted height."));
         inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lATTEMPTS -5", "&7Current: &f" + attempts));
-        inventory.setItem(38, guiItem(Material.PAPER, "&b&lMAXIMUM ATTEMPTS", "&7Current: &f" + attempts, "&7Range: 1–200."));
+        inventory.setItem(38, guiItem(Material.PAPER, "&f&lMAXIMUM ATTEMPTS", "&7Current: &f" + attempts, "&7Range: 1–200."));
         inventory.setItem(39, guiItem(Material.LIME_DYE, "&a&lATTEMPTS +5", "&7Increase search attempts."));
         int timeout = worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20));
         inventory.setItem(42, guiItem(Material.RED_DYE, "&c&lSEARCH TIMEOUT -5", "&7Current: &f" + timeout + "s"));
-        inventory.setItem(43, guiItem(Material.CLOCK, "&b&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
+        inventory.setItem(43, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
         inventory.setItem(44, guiItem(Material.LIME_DYE, "&a&lSEARCH TIMEOUT +5", "&7Increase search timeout."));
         inventory.setItem(41, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
                 enabled ? "&a&lWORLD RTP: ENABLED" : "&c&lWORLD RTP: DISABLED",
                 "&7Toggle whether this world is available in /rtp.",
                 "&e▶ Click to toggle"));
         inventory.setItem(45, guiItem(Material.ARROW, "&e&lBACK TO WORLD LIST", "&7Select another world."));
-        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&d&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
         player.openInventory(inventory);
     }
 
@@ -940,8 +940,8 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void fillGui(Inventory inventory) {
         ItemStack darkFiller = guiItem(Material.BLACK_STAINED_GLASS_PANE, "&0 ");
-        ItemStack accentFiller = guiItem(Material.PURPLE_STAINED_GLASS_PANE, "&5 ");
-        ItemStack highlightFiller = guiItem(Material.MAGENTA_STAINED_GLASS_PANE, "&d ");
+        ItemStack accentFiller = guiItem(Material.GRAY_STAINED_GLASS_PANE, "&8 ");
+        ItemStack highlightFiller = guiItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "&b ");
         int size = inventory.getSize();
         int columns = 9;
         for (int slot = 0; slot < size; slot++) {
