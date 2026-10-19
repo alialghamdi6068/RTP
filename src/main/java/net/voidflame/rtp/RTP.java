@@ -237,7 +237,8 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final int PLAYER_MENU_NEXT_SLOT_54 = 53;
 
     private String playerMenuPageTitle(int page) {
-        return playerMenuTitle() + ChatColor.DARK_GRAY + " | Page " + (page + 1);
+        return page <= 0 ? playerMenuTitle()
+                : playerMenuTitle() + ChatColor.DARK_GRAY + " | Page " + (page + 1);
     }
 
     private List<Integer> playerWorldMenuSlots(int menuSize) {
@@ -974,18 +975,21 @@ public final class RTP extends JavaPlugin implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
         String pagePrefix = playerMenuTitle() + ChatColor.DARK_GRAY + " | Page ";
-        if (!title.startsWith(pagePrefix)) return;
+        boolean firstPage = title.equals(playerMenuTitle());
+        if (!firstPage && !title.startsWith(pagePrefix)) return;
         event.setCancelled(true);
         int slot = event.getRawSlot();
         int menuSize = event.getView().getTopInventory().getSize();
         if (slot < 0 || slot >= menuSize) return;
 
-        int page;
-        try {
-            page = Integer.parseInt(title.substring(pagePrefix.length())) - 1;
-        } catch (NumberFormatException exception) {
-            player.closeInventory();
-            return;
+        int page = 0;
+        if (!firstPage) {
+            try {
+                page = Integer.parseInt(title.substring(pagePrefix.length())) - 1;
+            } catch (NumberFormatException exception) {
+                player.closeInventory();
+                return;
+            }
         }
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
         if (slot == closeSlot) {
