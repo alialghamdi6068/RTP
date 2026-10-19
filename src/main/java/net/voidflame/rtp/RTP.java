@@ -276,18 +276,10 @@ public final class RTP extends JavaPlugin implements Listener {
         int menuSize = configuredMenuSize == 54 ? 54 : 27;
         Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(Math.max(0, requestedPage)));
         if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-        inventory.setItem(2, guiItem(Material.AMETHYST_SHARD, "&5&lVOIDFLAME",
-                "&8━━━━━━━━━━━━━━━━━━━━", "&7Random teleport network",
-                "&7Choose your next destination."));
-        inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Explore beyond the horizon.",
-                "&7Every destination is checked for safety.",
-                "",
-                "&d✦ &fSelect a world to begin."));
-        inventory.setItem(6, guiItem(Material.ENDER_EYE, "&b&lEXPLORE",
-                "&8━━━━━━━━━━━━━━━━━━━━", "&7Find somewhere new.",
-                "&7Your adventure starts here."));
+        // Keep the player-facing selector close to the familiar Donut-style layout:
+        // concise title, three centered dimension buttons, and minimal item lore.
+        inventory.setItem(4, guiItem(Material.COMPASS, "&f&lChoose a destination",
+                "&7Select where you want to randomly teleport."));
 
         List<World> selectable = getSelectableWorlds();
         List<Integer> slots = playerWorldMenuSlots(menuSize);
@@ -298,15 +290,8 @@ public final class RTP extends JavaPlugin implements Listener {
         if (page != Math.max(0, requestedPage)) {
             inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(page));
             if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-            inventory.setItem(2, guiItem(Material.AMETHYST_SHARD, "&5&lVOIDFLAME",
-                    "&8━━━━━━━━━━━━━━━━━━━━", "&7Random teleport network",
-                    "&7Choose your next destination."));
-            inventory.setItem(4, guiItem(Material.COMPASS, "&d&lRANDOM TELEPORT",
-                    "&8&m━━━━━━━━━━━━━━━━━━━━", "&7Explore beyond the horizon.",
-                    "&7Every destination is checked for safety.", "", "&d✦ &fSelect a world to begin."));
-            inventory.setItem(6, guiItem(Material.ENDER_EYE, "&b&lEXPLORE",
-                    "&8━━━━━━━━━━━━━━━━━━━━", "&7Find somewhere new.",
-                    "&7Your adventure starts here."));
+            inventory.setItem(4, guiItem(Material.COMPASS, "&f&lChoose a destination",
+                    "&7Select where you want to randomly teleport."));
         }
 
         for (int i = 0; i < pageSize; i++) {
@@ -331,15 +316,12 @@ public final class RTP extends JavaPlugin implements Listener {
                 case THE_END -> "&d";
                 default -> "&a";
             };
-            inventory.setItem(slots.get(i), guiItem(icon, accent + "&l" + name.toUpperCase(java.util.Locale.ROOT),
-                    "&8&m━━━━━━━━━━━━━━━━━━━━",
-                    "&7Destination: &f" + world.getName(),
-                    "&7Players here: " + accent + world.getPlayers().size(),
-                    "&7Random range: &f" + minRadius + "–" + maxRadius + " blocks",
-                    "&7Cooldown: &f" + cooldown + " seconds",
+            inventory.setItem(slots.get(i), guiItem(icon, accent + name,
+                    "&fClick to randomly teleport",
                     "",
-                    accent + "✦ &fSAFE RANDOM DESTINATION",
-                    "&8Click to start teleport"));
+                    "&7Players: &b" + world.getPlayers().size(),
+                    "&7Range: &b" + minRadius + "-" + maxRadius,
+                    "&7Cooldown: &b" + cooldown + "s"));
         }
 
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
@@ -967,8 +949,7 @@ public final class RTP extends JavaPlugin implements Listener {
             int column = slot % columns;
             boolean border = row == 0 || column == 0 || column == columns - 1 || slot >= size - columns;
             ItemStack pane = !border ? darkFiller
-                    : ((row == 0 && (column == 2 || column == 4 || column == 6))
-                    ? highlightFiller : ((row + column) % 2 == 0 ? accentFiller : darkFiller));
+                    : ((row + column) % 2 == 0 ? accentFiller : darkFiller);
             inventory.setItem(slot, pane);
         }
     }
