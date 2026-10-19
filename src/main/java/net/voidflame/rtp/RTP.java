@@ -308,26 +308,29 @@ public final class RTP extends JavaPlugin implements Listener {
             int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
             long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
             String accent = switch (world.getEnvironment()) {
-                case NETHER -> "&c";
-                case THE_END -> "&d";
-                default -> "&a";
+                case NETHER -> "&5&l";
+                case THE_END -> "&b&l";
+                default -> "&d&l";
             };
             inventory.setItem(slots.get(i), guiItem(icon, accent + name,
-                    "&fClick to randomly teleport",
+                    "&7Click to randomly teleport",
                     "",
-                    "&7Players: &b" + world.getPlayers().size(),
-                    "&7Range: &b" + minRadius + "-" + maxRadius,
-                    "&7Cooldown: &b" + cooldown + "s"));
+                    "&8&m--------------------",
+                    "&7Players online: &b&l" + world.getPlayers().size(),
+                    "&7Teleport range: &d" + minRadius + " &8- &d" + maxRadius,
+                    "&7Cooldown: &b" + cooldown + "s",
+                    "",
+                    "&d&lVOIDFLAME &8• &fRandom Teleport"));
         }
 
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
-        inventory.setItem(closeSlot, guiItem(Material.BARRIER, "&c&lCLOSE MENU", "&7Close this menu."));
+        inventory.setItem(closeSlot, guiItem(Material.BARRIER, "&c&lCLOSE", "&7Close the RTP menu."));
         if (maxPage > 0) {
             int previousSlot = menuSize <= 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
             int nextSlot = menuSize <= 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
-            if (page > 0) inventory.setItem(previousSlot, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE",
+            if (page > 0) inventory.setItem(previousSlot, guiItem(Material.ARROW, "&d&lPREVIOUS PAGE",
                     "&7Page &f" + page + " &7of &f" + (maxPage + 1)));
-            if (page < maxPage) inventory.setItem(nextSlot, guiItem(Material.ARROW, "&e&lNEXT PAGE",
+            if (page < maxPage) inventory.setItem(nextSlot, guiItem(Material.ARROW, "&b&lNEXT PAGE",
                     "&7Page &f" + (page + 2) + " &7of &f" + (maxPage + 1)));
         }
         player.openInventory(inventory);
