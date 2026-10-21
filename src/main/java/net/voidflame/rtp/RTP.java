@@ -371,10 +371,23 @@ public final class RTP extends JavaPlugin implements Listener {
                 case THE_END -> "THE END";
                 default -> world.getName().equalsIgnoreCase("world") ? "OVERWORLD" : world.getName().toUpperCase(java.util.Locale.ROOT);
             };
-            Material icon = switch (world.getEnvironment()) {
-                case NETHER -> Material.NETHERRACK;
-                case THE_END -> Material.END_STONE;
-                default -> Material.GRASS_BLOCK;
+            String iconStyle = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
+            Material icon = switch (iconStyle) {
+                case "CLASSIC" -> switch (world.getEnvironment()) {
+                    case NETHER -> Material.NETHER_BRICK;
+                    case THE_END -> Material.ENDER_EYE;
+                    default -> Material.COMPASS;
+                };
+                case "MINIMAL" -> switch (world.getEnvironment()) {
+                    case NETHER -> Material.RED_CONCRETE;
+                    case THE_END -> Material.PURPLE_CONCRETE;
+                    default -> Material.LIME_CONCRETE;
+                };
+                default -> switch (world.getEnvironment()) {
+                    case NETHER -> Material.NETHERRACK;
+                    case THE_END -> Material.END_STONE;
+                    default -> Material.GRASS_BLOCK;
+                };
             };
             inventory.setItem(slots.get(i), guiItem(icon, "&f&l" + name,
                     "&7Randomly teleport to this dimension.",
@@ -724,14 +737,99 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(16, guiItem(Material.CLOCK, "&e&lRELOAD CONFIG",
                 "&8&m--------------------",
                 "&7Reload config.yml and validate its values.",
-                "&7Unsaved GUI changes are already saved.",
                 "",
                 "&e▶ Reload configuration"));
+
+        inventory.setItem(18, guiItem(Material.PAINTING, "&d&lPLAYER MENU APPEARANCE",
+                "&8&m--------------------",
+                "&7Change the /rtp menu title, size,",
+                "&7filler, close-button position and icons.",
+                "",
+                "&d▶ Customize player menu"));
 
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE",
                 "&7Close the administration menu."));
 
         player.openInventory(inventory);
+    }
+
+ 
+    private static final String GUI_APPEARANCE_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Menu Appearance";
+
+    private void openAppearanceGui(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, GUI_APPEARANCE_TITLE);
+        fillGui(inventory);
+        List<String> titles = List.of("&8&lRANDOM TELEPORT", "&5&lRTP SELECTOR", "&1&lDESTINATION SELECTOR", "&0&lWHERE TO?");
+        int titleIndex = Math.max(0, titles.indexOf(getConfig().getString("menu.title", "&8&lRANDOM TELEPORT")));
+        int size = getConfig().getInt("menu.size", 27);
+        boolean filler = getConfig().getBoolean("menu.filler", true);
+        int closeSlot = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
+        String iconStyle = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
+        inventory.setItem(4, guiItem(Material.PAINTING, "&d&lPLAYER MENU APPEARANCE",
+                "&7These options change the menu players see with /rtp.",
+                "&7Changes save automatically."));
+        inventory.setItem(10, guiItem(Material.NAME_TAG, "&f&lMENU TITLE",
+                "&7Current: &f" + getConfig().getString("menu.title", "&8&lRANDOM TELEPORT"),
+                "&7Preset " + (titleIndex + 1) + " of " + titles.size(),
+                "", "&d▶ Click to cycle title"));
+        inventory.setItem(12, guiItem(size == 27 ? Material.CHEST : Material.TRAPPED_CHEST,
+                "&f&lMENU SIZE: &d" + size + " SLOTS",
+                "&7Switch between compact 27-slot and",
+                "&7large 54-slot layouts.",
+                "", "&d▶ Click to toggle"));
+        inventory.setItem(14, guiItem(filler ? Material.LIME_DYE : Material.GRAY_DYE,
+                "&f&lBACKGROUND FILLER: " + (filler ? "&aON" : "&cOFF"),
+                "&7Toggle the decorative background panes.",
+                "", "&d▶ Click to toggle"));
+        inventory.setItem(16, guiItem(Material.ITEM_FRAME, "&f&lWORLD ICON STYLE",
+                "&7Current: &f" + iconStyle,
+                "&7Cycle the icons used for destinations.",
+                "", "&d▶ Click to cycle icons"));
+        inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE BUTTON POSITION",
+                "&7Current slot: &f" + closeSlot,
+                "&7Cycles through safe bottom-row positions.",
+                "", "&d▶ Click to move"));
+        inventory.setItem(18, guiItem(Material.ARROW, "&e&lBACK TO CONTROL CENTER",
+                "&7Return to RTP admin menu."));
+        player.openInventory(inventory);
+    }
+
+    private void handleAppearanceClick(Player player, int slot) {
+        List<String> titles = List.of("&8&lRANDOM TELEPORT", "&5&lRTP SELECTOR", "&1&lDESTINATION SELECTOR", "&0&lWHERE TO?");
+        int size = getConfig().getInt("menu.size", 27);
+        switch (slot) {
+            case 10 -> {
+                String current = getConfig().getString("menu.title", titles.get(0));
+                int index = titles.indexOf(current);
+                getConfig().set("menu.title", titles.get((index + 1 + titles.size()) % titles.size()));
+            }
+            case 12 -> {
+                int nextSize = size == 27 ? 54 : 27;
+                getConfig().set("menu.size", nextSize);
+                int close = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
+                if (close >= nextSize) getConfig().set("menu.close-slot", nextSize == 27 ? 22 : 49);
+            }
+            case 14 -> getConfig().set("menu.filler", !getConfig().getBoolean("menu.filler", true));
+            case 16 -> {
+                List<String> styles = List.of("DEFAULT", "CLASSIC", "MINIMAL");
+                String current = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
+                int index = styles.indexOf(current);
+                getConfig().set("menu.icon-style", styles.get((index + 1 + styles.size()) % styles.size()));
+            }
+            case 22 -> {
+                int menuSize = getConfig().getInt("menu.size", 27);
+                int[] positions = menuSize == 27 ? new int[]{18, 22, 26} : new int[]{45, 49, 53};
+                int current = getConfig().getInt("menu.close-slot", positions[1]);
+                int index = 0;
+                for (int i = 0; i < positions.length; i++) if (positions[i] == current) index = i;
+                getConfig().set("menu.close-slot", positions[(index + 1) % positions.length]);
+            }
+            case 18 -> { openMainGui(player); return; }
+            default -> { return; }
+        }
+        saveConfig();
+        validateConfig();
+        openAppearanceGui(player);
     }
 
     private void openSettingsGui(Player player) {
@@ -1254,9 +1352,22 @@ public final class RTP extends JavaPlugin implements Listener {
                 validateConfig();
                 player.sendMessage(message("reloaded"));
                 openMainGui(player);
+            } else if (slot == 18) {
+                openAppearanceGui(player);
             } else if (slot == 22) {
                 player.closeInventory();
             }
+            return;
+        }
+        if (title.equals(GUI_APPEARANCE_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) {
+                player.closeInventory();
+                return;
+            }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            handleAppearanceClick(player, slot);
             return;
         }
         if (title.equals(GUI_SETTINGS_TITLE)) {
