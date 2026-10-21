@@ -47,6 +47,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
     private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World | Page ";
     private static final String GUI_WORLD_SETTINGS_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "World RTP | ";
+    private static final String GUI_WORLD_AREA_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Area | ";
     private static final String GUI_WORLDS_TITLE = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
 
     @Override
@@ -742,6 +743,12 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Changes save automatically to config.yml.",
                 "",
                 "&fClick a control below to adjust it."));
+        inventory.setItem(1, guiItem(Material.RED_DYE, "&c&lMIN RADIUS -1000", "&7Global minimum RTP radius.", "&7Current: &f" + getConfig().getInt("minimum-radius", 1000)));
+        inventory.setItem(2, guiItem(Material.MAP, "&f&lGLOBAL MINIMUM RADIUS", "&7Current: &f" + getConfig().getInt("minimum-radius", 1000), "&7Minimum distance from world spawn."));
+        inventory.setItem(3, guiItem(Material.LIME_DYE, "&a&lMIN RADIUS +1000", "&7Increase global minimum radius."));
+        inventory.setItem(5, guiItem(Material.RED_DYE, "&c&lMAX RADIUS -5000", "&7Global maximum RTP radius.", "&7Current: &f" + getConfig().getInt("maximum-radius", 50000)));
+        inventory.setItem(6, guiItem(Material.MAP, "&f&lGLOBAL MAXIMUM RADIUS", "&7Current: &f" + getConfig().getInt("maximum-radius", 50000), "&7Maximum distance from world spawn."));
+        inventory.setItem(7, guiItem(Material.LIME_DYE, "&a&lMAX RADIUS +5000", "&7Increase global maximum radius."));
 
         inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lDECREASE COUNTDOWN",
                 "&7Shorten the pre-teleport countdown.",
@@ -829,6 +836,10 @@ public final class RTP extends JavaPlugin implements Listener {
         String path = null;
         int delta = 0;
         switch (slot) {
+            case 1 -> { path = "minimum-radius"; delta = -1000; }
+            case 3 -> { path = "minimum-radius"; delta = 1000; }
+            case 5 -> { path = "maximum-radius"; delta = -5000; }
+            case 7 -> { path = "maximum-radius"; delta = 5000; }
             case 10 -> { path = "countdown-seconds"; delta = -1; }
             case 14 -> { path = "countdown-seconds"; delta = 1; }
             case 19 -> { path = "cooldown-seconds"; delta = -5; }
@@ -842,6 +853,20 @@ public final class RTP extends JavaPlugin implements Listener {
             default -> { return; }
         }
         int value = getConfig().getInt(path);
+        if (path.equals("minimum-radius")) {
+            int maxRadius = getConfig().getInt("maximum-radius", 50000);
+            getConfig().set(path, Math.max(0, Math.min(maxRadius - 1, value + delta)));
+            saveConfig();
+            openSettingsGui(player);
+            return;
+        }
+        if (path.equals("maximum-radius")) {
+            int minRadius = getConfig().getInt("minimum-radius", 1000);
+            getConfig().set(path, Math.max(minRadius + 1, Math.min(30_000_000, value + delta)));
+            saveConfig();
+            openSettingsGui(player);
+            return;
+        }
         int min = switch (path) {
             case "countdown-seconds" -> 0;
             case "cooldown-seconds" -> 0;
@@ -997,9 +1022,72 @@ public final class RTP extends JavaPlugin implements Listener {
                 enabled ? "&a&lWORLD RTP: ENABLED" : "&c&lWORLD RTP: DISABLED",
                 "&7Toggle whether this world is available in /rtp.",
                 "&e▶ Click to toggle"));
+        inventory.setItem(47, guiItem(Material.FILLED_MAP, "&b&lRTP AREA BOUNDS",
+                "&7Set rectangular X/Z boundaries for this world.",
+                "&7Use your current position for each coordinate.",
+                "&e▶ Click to edit area bounds"));
         inventory.setItem(45, guiItem(Material.ARROW, "&e&lBACK TO WORLD LIST", "&7Select another world."));
         inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER", "&7Return to the main admin menu."));
         player.openInventory(inventory);
+    }
+
+
+    private void openWorldAreaGui(Player player, World world) {
+        String title = GUI_WORLD_AREA_PREFIX + world.getName();
+        Inventory inventory = Bukkit.createInventory(null, 54, title);
+        fillGui(inventory);
+        String base = "world-areas." + world.getName() + ".";
+        inventory.setItem(4, guiItem(Material.FILLED_MAP, "&b&lRECTANGULAR RTP AREA",
+                "&7World: &f" + world.getName(),
+                "&7Each coordinate is set to your current block position.",
+                "&7All four bounds must be set and min must not exceed max.",
+                "",
+                "&eMove to a corner, then click the matching control."));
+        inventory.setItem(10, guiItem(Material.RED_DYE, "&c&lSET MIN X",
+                "&7Current: &f" + (getConfig().contains(base + "min-x") ? getConfig().getInt(base + "min-x") : "Not set"),
+                "&e▶ Set min X to your current X: &f" + player.getLocation().getBlockX()));
+        inventory.setItem(12, guiItem(Material.LIME_DYE, "&a&lSET MAX X",
+                "&7Current: &f" + (getConfig().contains(base + "max-x") ? getConfig().getInt(base + "max-x") : "Not set"),
+                "&e▶ Set max X to your current X: &f" + player.getLocation().getBlockX()));
+        inventory.setItem(14, guiItem(Material.RED_DYE, "&c&lSET MIN Z",
+                "&7Current: &f" + (getConfig().contains(base + "min-z") ? getConfig().getInt(base + "min-z") : "Not set"),
+                "&e▶ Set min Z to your current Z: &f" + player.getLocation().getBlockZ()));
+        inventory.setItem(16, guiItem(Material.LIME_DYE, "&a&lSET MAX Z",
+                "&7Current: &f" + (getConfig().contains(base + "max-z") ? getConfig().getInt(base + "max-z") : "Not set"),
+                "&e▶ Set max Z to your current Z: &f" + player.getLocation().getBlockZ()));
+        inventory.setItem(22, guiItem(Material.PAPER, "&f&lCURRENT BOUNDS",
+                "&7Min X: &f" + (getConfig().contains(base + "min-x") ? getConfig().getInt(base + "min-x") : "Not set"),
+                "&7Max X: &f" + (getConfig().contains(base + "max-x") ? getConfig().getInt(base + "max-x") : "Not set"),
+                "&7Min Z: &f" + (getConfig().contains(base + "min-z") ? getConfig().getInt(base + "min-z") : "Not set"),
+                "&7Max Z: &f" + (getConfig().contains(base + "max-z") ? getConfig().getInt(base + "max-z") : "Not set")));
+        inventory.setItem(31, guiItem(Material.BARRIER, "&c&lCLEAR CUSTOM AREA",
+                "&7Remove the rectangle and use global radius settings instead.",
+                "&e▶ Click to clear"));
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lBACK TO WORLD SETTINGS", "&7Return to this world's settings."));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER", "&7Return to the admin menu."));
+        player.openInventory(inventory);
+    }
+
+    private void handleWorldAreaClick(Player player, World world, int slot) {
+        String base = "world-areas." + world.getName() + ".";
+        switch (slot) {
+            case 10 -> getConfig().set(base + "min-x", player.getLocation().getBlockX());
+            case 12 -> getConfig().set(base + "max-x", player.getLocation().getBlockX());
+            case 14 -> getConfig().set(base + "min-z", player.getLocation().getBlockZ());
+            case 16 -> getConfig().set(base + "max-z", player.getLocation().getBlockZ());
+            case 31 -> {
+                getConfig().set(base + "min-x", null);
+                getConfig().set(base + "max-x", null);
+                getConfig().set(base + "min-z", null);
+                getConfig().set(base + "max-z", null);
+                getConfig().set("world-areas." + world.getName(), null);
+            }
+            case 45 -> { openWorldSettingsGui(player, world); return; }
+            case 49 -> { openMainGui(player); return; }
+            default -> { return; }
+        }
+        saveConfig();
+        openWorldAreaGui(player, world);
     }
 
     private void adjustWorldSetting(Player player, World world, int slot) {
@@ -1196,6 +1284,17 @@ public final class RTP extends JavaPlugin implements Listener {
             if (worldIndex >= 0 && worldIndex < worlds.size()) openWorldSettingsGui(player, worlds.get(worldIndex));
             return;
         }
+        if (title.startsWith(GUI_WORLD_AREA_PREFIX)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            String worldName = title.substring(GUI_WORLD_AREA_PREFIX.length());
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) { player.closeInventory(); return; }
+            handleWorldAreaClick(player, world, slot);
+            return;
+        }
         if (title.startsWith(GUI_WORLD_SETTINGS_PREFIX)) {
             event.setCancelled(true);
             if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
@@ -1206,6 +1305,7 @@ public final class RTP extends JavaPlugin implements Listener {
             if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
             if (slot == 45) { openWorldSettingsSelector(player); return; }
             if (slot == 49) { openMainGui(player); return; }
+            if (slot == 47) { openWorldAreaGui(player, world); return; }
             adjustWorldSetting(player, world, slot);
             return;
         }
