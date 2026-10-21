@@ -617,30 +617,51 @@ public final class RTP extends JavaPlugin implements Listener {
                 searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
-            Block ground = world.getHighestBlockAt(x, z);
-            int groundY = ground.getY();
+
+            Location playerLocation = player.getLocation();
+            Location destination = null;
             int minimumY = Math.max(world.getMinHeight(), worldInt(world, "minimum-y", world.getMinHeight()));
             int maximumY = Math.min(world.getMaxHeight() - 2, worldInt(world, "maximum-y", world.getMaxHeight() - 2));
-            if (groundY < minimumY || groundY > maximumY || groundY + 2 >= world.getMaxHeight()) {
-                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
-                return;
-            }
-            Material groundType = ground.getType();
-            Block feet = ground.getRelative(0, 1, 0);
-            Block head = ground.getRelative(0, 2, 0);
             boolean avoidWater = getConfig().getBoolean("avoid-water", true);
-            if (!groundType.isSolid() || isUnsafe(groundType)
-                    || !feet.isPassable() || !head.isPassable()
-                    || isUnsafe(feet.getType()) || isUnsafe(head.getType())
-                    || (avoidWater && (feet.isLiquid() || head.isLiquid()))) {
+
+            // Search the selected column first, then nearby columns in the same loaded chunk.
+            // This helps when the random coordinate lands in a crater, a narrow hole, or damaged terrain.
+            for (int radius = 0; radius <= 7 && destination == null; radius++) {
+                for (int dx = -radius; dx <= radius && destination == null; dx++) {
+                    for (int dz = -radius; dz <= radius && destination == null; dz++) {
+                        if (radius > 0 && Math.abs(dx) != radius && Math.abs(dz) != radius) continue;
+                        int candidateX = x + dx;
+                        int candidateZ = z + dz;
+                        if ((candidateX >> 4) != (x >> 4) || (candidateZ >> 4) != (z >> 4)) continue;
+
+                        Location borderCheck = new Location(world, candidateX + 0.5, world.getMinHeight(), candidateZ + 0.5);
+                        if (!world.getWorldBorder().isInside(borderCheck)) continue;
+
+                        Block ground = world.getHighestBlockAt(candidateX, candidateZ);
+                        int groundY = ground.getY();
+                        if (groundY < minimumY || groundY > maximumY || groundY + 2 >= world.getMaxHeight()) continue;
+
+                        Material groundType = ground.getType();
+                        Block feet = ground.getRelative(0, 1, 0);
+                        Block head = ground.getRelative(0, 2, 0);
+                        if (!groundType.isSolid() || isUnsafe(groundType)
+                                || !feet.isPassable() || !head.isPassable()
+                                || isUnsafe(feet.getType()) || isUnsafe(head.getType())
+                                || (avoidWater && (feet.isLiquid() || head.isLiquid()))) continue;
+
+                        destination = new Location(world, candidateX + 0.5, groundY + 1.0, candidateZ + 0.5,
+                                playerLocation.getYaw(), playerLocation.getPitch());
+                    }
+                }
+            }
+
+            if (destination == null) {
                 searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
                 return;
             }
 
-            Location playerLocation = player.getLocation();
-            Location destination = new Location(world, x + 0.5, groundY + 1.0, z + 0.5,
-                    playerLocation.getYaw(), playerLocation.getPitch());
-            player.teleportAsync(destination).whenComplete((success, error) ->
+            Location safeDestination = destination;
+            player.teleportAsync(safeDestination).whenComplete((success, error) ->
                     runOnMainIfEnabled(() -> {
                         if (!finishSearch(player.getUniqueId(), searchToken) || !player.isOnline()) return;
                         if (error != null) {
