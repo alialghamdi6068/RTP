@@ -52,10 +52,49 @@ public final class RTP extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateLegacyDefaults();
         loadCooldowns();
         validateConfig();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("RTP enabled.");
+    }
+
+    private void migrateLegacyDefaults() {
+        boolean changed = false;
+        if (getConfig().getInt("config-version", 0) < 2) {
+            // Upgrade only values that still match the previous plugin defaults; preserve custom settings.
+            if (getConfig().getInt("countdown-seconds", -1) == 5) {
+                getConfig().set("countdown-seconds", 0);
+                changed = true;
+            }
+            if (getConfig().getInt("minimum-radius", -1) == 100) {
+                getConfig().set("minimum-radius", 1000);
+                changed = true;
+            }
+            if (getConfig().getInt("maximum-radius", -1) == 5000) {
+                getConfig().set("maximum-radius", 50000);
+                changed = true;
+            }
+            if (getConfig().getInt("maximum-attempts", -1) == 30) {
+                getConfig().set("maximum-attempts", 200);
+                changed = true;
+            }
+            if (!getConfig().getBoolean("load-chunks", true)) {
+                getConfig().set("load-chunks", true);
+                changed = true;
+            }
+            String menuTitle = getConfig().getString("menu.title", "");
+            if ("&8&lRTP".equals(menuTitle) || "&8&lRandom Teleport".equals(menuTitle)) {
+                getConfig().set("menu.title", "&8&lRANDOM TELEPORT");
+                changed = true;
+            }
+            getConfig().set("config-version", 2);
+            changed = true;
+        }
+        if (changed) {
+            saveConfig();
+            getLogger().info("Migrated RTP configuration to version 2 while preserving customized values.");
+        }
     }
 
     @Override
