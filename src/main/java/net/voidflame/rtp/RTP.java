@@ -689,48 +689,48 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openMainGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 27, GUI_MAIN_TITLE);
         fillGui(inventory);
-        inventory.setItem(2, guiItem(Material.AMETHYST_SHARD, "&6&lVOIDFLAME RTP",
-                "&8&m━━━━━━━━━━━━━━━━━━━━", "&7ADMINISTRATOR CONSOLE",
-                "&7Control the random teleport experience."));
-        inventory.setItem(4, guiItem(Material.NETHER_STAR, "&6&lCONTROL CENTER",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Manage your RTP network from one place.",
-                "&7Changes are saved automatically.",
-                "",
-                "&6✦ &fChoose a module below."));
-        inventory.setItem(6, guiItem(Material.END_CRYSTAL, "&f&lLIVE OVERVIEW",
-                "&8&m━━━━━━━━━━━━━━━━━━━━", "&7Loaded worlds: &f" + Bukkit.getWorlds().size(),
-                "&7Active searches: &f" + searches.size(),
-                "&7System status: &aOperational"));
-        inventory.setItem(10, guiItem(Material.GRASS_BLOCK, "&a&lWORLD MANAGEMENT",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Manage which destinations are available.",
-                "",
+
+        inventory.setItem(4, guiItem(Material.COMPARATOR, "&5&lRTP ADMIN",
+                "&8&m--------------------",
+                "&7Manage RTP settings and destination worlds.",
                 "&7Loaded worlds: &f" + Bukkit.getWorlds().size(),
-                "&a✦ &fOpen world controls"));
-        inventory.setItem(13, guiItem(Material.CLOCK, "&f&lGLOBAL SETTINGS",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Teleport mode: &a" + (getConfig().getInt("countdown-seconds", 0) == 0 ? "Instant" : getConfig().getInt("countdown-seconds", 0) + "s countdown"),
+                "&7Active searches: &f" + searches.size(),
+                "",
+                "&8Select an action below."));
+
+        inventory.setItem(10, guiItem(Material.GRASS_BLOCK, "&a&lWORLD MANAGEMENT",
+                "&8&m--------------------",
+                "&7Enable or disable RTP per loaded world.",
+                "",
+                "&a▶ Open world management"));
+
+        inventory.setItem(12, guiItem(Material.REPEATER, "&d&lGLOBAL SETTINGS",
+                "&8&m--------------------",
+                "&7Default radius: &f" + getConfig().getInt("minimum-radius", 1000)
+                        + "–" + getConfig().getInt("maximum-radius", 50000),
                 "&7Cooldown: &f" + getConfig().getInt("cooldown-seconds", 30) + "s",
-                "&7Search attempts: &f" + getConfig().getInt("maximum-attempts", 30),
-                "&7Chunk loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
-                "&7Water avoidance: " + (getConfig().getBoolean("avoid-water", true) ? "&aEnabled" : "&cDisabled"),
+                "&7Countdown: &f" + (getConfig().getInt("countdown-seconds", 0) == 0
+                        ? "Instant" : getConfig().getInt("countdown-seconds", 0) + "s"),
                 "",
-                "&b◆ &fConfigure global behavior"));
-        inventory.setItem(19, guiItem(Material.COMPARATOR, "&6&lWORLD PROFILES",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Customize each world separately.",
-                "&7Radius, height, cooldown and timing.",
+                "&d▶ Edit global settings"));
+
+        inventory.setItem(14, guiItem(Material.WRITABLE_BOOK, "&b&lWORLD PROFILES",
+                "&8&m--------------------",
+                "&7Configure radius, height, timing and",
+                "&7search limits separately for each world.",
                 "",
-                "&6✦ &fChoose a world profile"));
-        inventory.setItem(16, guiItem(Material.WRITABLE_BOOK, "&e&lRELOAD CONFIG",
-                "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Load config.yml from disk again.",
-                "&7All values will be validated.",
+                "&b▶ Select a world"));
+
+        inventory.setItem(16, guiItem(Material.CLOCK, "&e&lRELOAD CONFIG",
+                "&8&m--------------------",
+                "&7Reload config.yml and validate its values.",
+                "&7Unsaved GUI changes are already saved.",
                 "",
-                "&e✦ &fClick to reload settings"));
-        inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE MENU",
-                "&7Close the RTP Control Center."));
+                "&e▶ Reload configuration"));
+
+        inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE",
+                "&7Close the administration menu."));
+
         player.openInventory(inventory);
     }
 
@@ -1245,9 +1245,9 @@ public final class RTP extends JavaPlugin implements Listener {
             if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
             if (slot == 10) {
                 openWorldGui(player, 0);
-            } else if (slot == 13) {
+            } else if (slot == 12) {
                 openSettingsGui(player);
-            } else if (slot == 19) {
+            } else if (slot == 14) {
                 openWorldSettingsSelector(player);
             } else if (slot == 16) {
                 reloadConfig();
