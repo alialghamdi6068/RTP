@@ -317,15 +317,11 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private List<Integer> playerWorldMenuSlots(int menuSize, int page) {
         List<Integer> candidates = new ArrayList<>();
-        int[] base = menuSize <= 27
-                ? new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25}
-                : new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25,
-                    28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", menuSize == 27 ? 22 : 49)));
         int previous = menuSize == 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
         int next = menuSize == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
-        for (int slot : base) {
-            if (slot < menuSize && slot != closeSlot && slot != 4 && slot != previous && slot != next) candidates.add(slot);
+        for (int slot = 0; slot < menuSize; slot++) {
+            if (slot != closeSlot && slot != 4 && slot != previous && slot != next) candidates.add(slot);
         }
 
         List<World> worlds = getSelectableWorlds();
