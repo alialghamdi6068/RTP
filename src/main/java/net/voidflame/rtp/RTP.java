@@ -315,31 +315,36 @@ public final class RTP extends JavaPlugin implements Listener {
                 : playerMenuTitle() + ChatColor.DARK_GRAY + " | Page " + (page + 1);
     }
 
-    private List<Integer> playerWorldMenuSlots(int menuSize) {
-        List<Integer> slots = new ArrayList<>();
-        int[] candidates = menuSize <= 27
+    private List<Integer> playerWorldMenuSlots(int menuSize, int page) {
+        List<Integer> candidates = new ArrayList<>();
+        int[] base = menuSize <= 27
                 ? new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25}
                 : new int[]{10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25,
                     28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
-        int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
-        for (int candidate : candidates) {
-            if (candidate < menuSize && candidate != closeSlot && candidate != 4) slots.add(candidate);
+        int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", menuSize == 27 ? 22 : 49)));
+        int previous = menuSize == 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
+        int next = menuSize == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
+        for (int slot : base) {
+            if (slot < menuSize && slot != closeSlot && slot != 4 && slot != previous && slot != next) candidates.add(slot);
         }
-        // Preserve configured positions for the three standard dimensions when they are valid and free.
-        int[] configured = {
-                getConfig().getInt("menu.world-slots.world", 11),
-                getConfig().getInt("menu.world-slots.world_nether", 13),
-                getConfig().getInt("menu.world-slots.world_the_end", 15)
-        };
-        // Add in reverse so the final order matches Overworld, Nether, then End.
-        for (int i = configured.length - 1; i >= 0; i--) {
-            int desired = configured[i];
-            if (desired >= 0 && desired < menuSize && slots.contains(desired)) {
-                slots.remove(Integer.valueOf(desired));
-                slots.add(0, desired);
+
+        List<World> worlds = getSelectableWorlds();
+        int pageSize = candidates.size();
+        int startIndex = Math.max(0, page) * pageSize;
+        java.util.Set<Integer> used = new java.util.HashSet<>();
+        List<Integer> ordered = new ArrayList<>();
+        for (int i = startIndex; i < Math.min(worlds.size(), startIndex + pageSize); i++) {
+            World world = worlds.get(i);
+            int desired = getConfig().getInt("menu.world-slots." + world.getName(), defaultSlotForWorld(world));
+            if (candidates.contains(desired) && used.add(desired)) ordered.add(desired);
+            else {
+                for (int candidate : candidates) {
+                    if (used.add(candidate)) { ordered.add(candidate); break; }
+                }
             }
         }
-        return slots;
+        for (int candidate : candidates) if (used.add(candidate)) ordered.add(candidate);
+        return ordered;
     }
 
     private void openPlayerGui(Player player) {
@@ -355,7 +360,7 @@ public final class RTP extends JavaPlugin implements Listener {
         // and the dimension buttons carry the useful destination details.
 
         List<World> selectable = getSelectableWorlds();
-        List<Integer> slots = playerWorldMenuSlots(menuSize);
+        List<Integer> slots = playerWorldMenuSlots(menuSize, Math.max(0, requestedPage));
         int pageSize = slots.size();
         int maxPage = pageSize == 0 ? 0 : Math.max(0, (selectable.size() - 1) / pageSize);
         int page = Math.max(0, Math.min(requestedPage, maxPage));
@@ -1432,7 +1437,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int previousSlot = menuSize <= 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
         int nextSlot = menuSize <= 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
         List<World> worlds = getSelectableWorlds();
-        List<Integer> worldSlots = playerWorldMenuSlots(menuSize);
+        List<Integer> worldSlots = playerWorldMenuSlots(menuSize, page);
         int pageSize = worldSlots.size();
         int maxPage = pageSize == 0 ? 0 : Math.max(0, (worlds.size() - 1) / pageSize);
         if (slot == previousSlot && page > 0) {
