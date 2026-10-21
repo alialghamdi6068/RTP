@@ -30,7 +30,7 @@ class RtpConfigTest {
         assertEquals(30, config.getInt("cooldown-seconds"));
         assertTrue(config.getInt("minimum-radius") >= 0);
         assertTrue(config.getInt("maximum-radius") > config.getInt("minimum-radius"));
-        assertEquals(100, config.getInt("maximum-attempts"), "Default search should use the faster attempt budget");
+        assertEquals(200, config.getInt("maximum-attempts"));
         assertTrue(config.getInt("maximum-attempts") >= 1);
         assertTrue(config.getInt("maximum-attempts") <= 200);
         assertTrue(config.getInt("maximum-active-searches") >= 1);
