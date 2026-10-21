@@ -567,6 +567,51 @@ public final class RTP extends JavaPlugin implements Listener {
                 minRadius, maxRadius, centerX, centerZ, customArea, minX, maxX, minZ, maxZ));
     }
 
+    private int[] findLoadedCandidate(World world, int minRadius, int maxRadius,
+                                      int centerX, int centerZ, boolean customArea,
+                                      int minX, int maxX, int minZ, int maxZ) {
+        org.bukkit.Chunk[] chunks = world.getLoadedChunks();
+        if (chunks.length == 0) return null;
+
+        org.bukkit.Chunk selected = null;
+        int eligible = 0;
+        long minSquared = (long) minRadius * minRadius;
+        long maxSquared = (long) maxRadius * maxRadius;
+        for (org.bukkit.Chunk chunk : chunks) {
+            int baseX = chunk.getX() << 4;
+            int baseZ = chunk.getZ() << 4;
+            int x = baseX + 8;
+            int z = baseZ + 8;
+            if (customArea) {
+                if (baseX + 15 < minX || baseX > maxX || baseZ + 15 < minZ || baseZ > maxZ) continue;
+            } else {
+                long dx = (long) x - centerX;
+                long dz = (long) z - centerZ;
+                long distanceSquared = dx * dx + dz * dz;
+                long distance = (long) Math.sqrt(distanceSquared);
+                long nearest = Math.max(0L, distance - 12L);
+                long farthest = distance + 12L;
+                if (nearest * nearest > maxSquared || farthest * farthest < minSquared) continue;
+            }
+            if (random.nextInt(++eligible) == 0) selected = chunk;
+        }
+        if (selected == null) return null;
+
+        int x = (selected.getX() << 4) + random.nextInt(16);
+        int z = (selected.getZ() << 4) + random.nextInt(16);
+        if (customArea) {
+            x = Math.max(minX, Math.min(maxX, x));
+            z = Math.max(minZ, Math.min(maxZ, z));
+        } else {
+            long dx = (long) x - centerX;
+            long dz = (long) z - centerZ;
+            long distanceSquared = dx * dx + dz * dz;
+            if (distanceSquared < minSquared || distanceSquared > maxSquared) return null;
+        }
+        if (!world.getWorldBorder().isInside(new Location(world, x + 0.5, world.getMinHeight(), z + 0.5))) return null;
+        return new int[]{x, z};
+    }
+
     private void searchCandidate(Player player, World world, UUID searchToken,
                                   int minRadius, int maxRadius, int centerX, int centerZ,
                                   boolean customArea, int minX, int maxX, int minZ, int maxZ) {
@@ -575,7 +620,12 @@ public final class RTP extends JavaPlugin implements Listener {
         if (!isActiveSearch(playerId, searchToken)) return;
 
         int x, z;
-        if (customArea) {
+        int[] loadedCandidate = findLoadedCandidate(world, minRadius, maxRadius, centerX, centerZ,
+                customArea, minX, maxX, minZ, maxZ);
+        if (loadedCandidate != null) {
+            x = loadedCandidate[0];
+            z = loadedCandidate[1];
+        } else if (customArea) {
             x = (int) random.nextLong((long) minX, (long) maxX + 1L);
             z = (int) random.nextLong((long) minZ, (long) maxZ + 1L);
         } else {
