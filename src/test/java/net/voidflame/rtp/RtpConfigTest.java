@@ -30,9 +30,7 @@ class RtpConfigTest {
         assertEquals(30, config.getInt("cooldown-seconds"));
         assertTrue(config.getInt("minimum-radius") >= 0);
         assertTrue(config.getInt("maximum-radius") > config.getInt("minimum-radius"));
-        assertEquals(200, config.getInt("maximum-attempts"));
-        assertTrue(config.getInt("maximum-attempts") >= 1);
-        assertTrue(config.getInt("maximum-attempts") <= 200);
+        assertFalse(config.contains("maximum-attempts"), "Search attempts are no longer capped by a config option");
         assertTrue(config.getInt("maximum-active-searches") >= 1);
         assertTrue(config.getInt("maximum-active-searches") <= 500);
         assertTrue(config.getInt("search-timeout-seconds") >= 5);
