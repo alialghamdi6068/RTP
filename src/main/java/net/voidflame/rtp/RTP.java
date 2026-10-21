@@ -42,11 +42,14 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
     private final java.util.Set<UUID> pendingTitleEdits = new java.util.HashSet<>();
+    private final Map<UUID, String> pendingMessageEdits = new HashMap<>();
+    private final Map<UUID, Integer> messageEditorPages = new HashMap<>();
     private File cooldownFile;
     private YamlConfiguration cooldownData;
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
     private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
+    private static final String GUI_MESSAGES_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Message Editor | Page ";
     private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World | Page ";
     private static final String GUI_WORLD_SETTINGS_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "World RTP | ";
     private static final String GUI_WORLD_AREA_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Area | ";
@@ -109,6 +112,8 @@ public final class RTP extends JavaPlugin implements Listener {
         searches.clear();
         searchTokens.clear();
         pendingTitleEdits.clear();
+        pendingMessageEdits.clear();
+        messageEditorPages.clear();
         saveCooldowns();
     }
 
@@ -748,6 +753,13 @@ public final class RTP extends JavaPlugin implements Listener {
                 "",
                 "&d▶ Customize player menu"));
 
+        inventory.setItem(20, guiItem(Material.WRITABLE_BOOK, "&b&lMESSAGE EDITOR",
+                "&8&m--------------------",
+                "&7Customize player-facing messages in-game.",
+                "&7Edit prefixes, errors, cooldowns and results.",
+                "",
+                "&b▶ Open message editor"));
+
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE",
                 "&7Close the administration menu."));
 
@@ -892,6 +904,32 @@ public final class RTP extends JavaPlugin implements Listener {
     @EventHandler
     public void onCustomTitleChat(AsyncPlayerChatEvent event) {
         UUID id = event.getPlayer().getUniqueId();
+        if (pendingMessageEdits.containsKey(id)) {
+            event.setCancelled(true);
+            String typedMessage = event.getMessage().trim();
+            Bukkit.getScheduler().runTask(this, () -> {
+                Player player = Bukkit.getPlayer(id);
+                String key = pendingMessageEdits.remove(id);
+                Integer page = messageEditorPages.remove(id);
+                if (player == null || key == null) return;
+                if (typedMessage.equalsIgnoreCase("cancel")) {
+                    player.sendMessage(color("&eMessage edit cancelled."));
+                    openMessageEditor(player, page == null ? 0 : page);
+                    return;
+                }
+                if (typedMessage.isEmpty() || typedMessage.length() > 256) {
+                    player.sendMessage(color("&cMessage must contain 1–256 characters. Type it again or cancel."));
+                    pendingMessageEdits.put(id, key);
+                    messageEditorPages.put(id, page == null ? 0 : page);
+                    return;
+                }
+                getConfig().set("messages." + key, typedMessage);
+                saveConfig();
+                player.sendMessage(color("&aSaved messages." + key + "&7."));
+                openMessageEditor(player, page == null ? 0 : page);
+            });
+            return;
+        }
         if (!pendingTitleEdits.contains(id)) return;
         event.setCancelled(true);
         String typed = event.getMessage().trim();
@@ -954,6 +992,50 @@ public final class RTP extends JavaPlugin implements Listener {
         saveConfig();
         validateConfig();
         openAppearanceGui(player);
+    }
+
+    private List<String> editableMessageKeys() {
+        List<String> keys = new ArrayList<>();
+        keys.add("prefix");
+        if (getConfig().isConfigurationSection("messages")) {
+            for (String key : getConfig().getConfigurationSection("messages").getKeys(false)) {
+                if (!key.equals("prefix")) keys.add(key);
+            }
+        }
+        keys.sort(String.CASE_INSENSITIVE_ORDER);
+        keys.remove("prefix");
+        keys.add(0, "prefix");
+        return keys;
+    }
+
+    private void openMessageEditor(Player player, int requestedPage) {
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_MESSAGES_TITLE + (requestedPage + 1));
+        fillGui(inventory);
+        List<String> keys = editableMessageKeys();
+        int maxPage = Math.max(0, (keys.size() - 1) / 45);
+        int page = Math.max(0, Math.min(requestedPage, maxPage));
+        inventory.setItem(4, guiItem(Material.WRITABLE_BOOK, "&b&lMESSAGE EDITOR",
+                "&7Click any message to edit it in chat.",
+                "&7Color codes using &f& &7are supported.",
+                "&7Edits save immediately to config.yml.",
+                "&7Configured messages: &f" + keys.size()));
+        for (int slot = 0; slot < 45; slot++) {
+            int index = page * 45 + slot;
+            if (index >= keys.size()) break;
+            String key = keys.get(index);
+            String value = getConfig().getString("messages." + key, "");
+            String preview = value.length() > 42 ? value.substring(0, 42) + "..." : value;
+            inventory.setItem(slot, guiItem(key.equals("prefix") ? Material.NAME_TAG : Material.PAPER,
+                    "&f&l" + key,
+                    "&7Current value:",
+                    "&8" + preview,
+                    "",
+                    "&b▶ Click to edit"));
+        }
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE"));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK TO CONTROL CENTER"));
+        inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE"));
+        player.openInventory(inventory);
     }
 
     private void openSettingsGui(Player player) {
@@ -1478,9 +1560,36 @@ public final class RTP extends JavaPlugin implements Listener {
                 openMainGui(player);
             } else if (slot == 18) {
                 openAppearanceGui(player);
+            } else if (slot == 20) {
+                openMessageEditor(player, 0);
             } else if (slot == 22) {
                 player.closeInventory();
             }
+            return;
+        }
+
+        if (title.startsWith(GUI_MESSAGES_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= 54) return;
+            int page;
+            try { page = Integer.parseInt(title.substring(GUI_MESSAGES_TITLE.length())) - 1; }
+            catch (NumberFormatException exception) { player.closeInventory(); return; }
+            List<String> keys = editableMessageKeys();
+            int maxPage = Math.max(0, (keys.size() - 1) / 45);
+            if (slot == 49) { openMainGui(player); return; }
+            if (slot == 45) { if (page > 0) openMessageEditor(player, page - 1); return; }
+            if (slot == 53) { if (page < maxPage) openMessageEditor(player, page + 1); return; }
+            if (slot >= 45) return;
+            int index = page * 45 + slot;
+            if (index >= keys.size()) return;
+            String key = keys.get(index);
+            pendingMessageEdits.put(player.getUniqueId(), key);
+            messageEditorPages.put(player.getUniqueId(), page);
+            player.closeInventory();
+            player.sendMessage(color("&dRTP &8» &7Type the new value for &fmessages." + key
+                    + "&7 in chat. Use &f& &7for colors, or type &fcancel&7 to abort."));
             return;
         }
 
