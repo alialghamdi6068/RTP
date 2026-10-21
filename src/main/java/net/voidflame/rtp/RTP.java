@@ -772,7 +772,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openAppearanceGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 27, GUI_APPEARANCE_TITLE);
-        fillGui(inventory);
+        
         List<String> titles = List.of("&8&lRANDOM TELEPORT", "&5&lRTP SELECTOR", "&1&lDESTINATION SELECTOR", "&0&lWHERE TO?");
         int titleIndex = Math.max(0, titles.indexOf(getConfig().getString("menu.title", "&8&lRANDOM TELEPORT")));
         int size = getConfig().getInt("menu.size", 27);
@@ -849,7 +849,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openWorldIconEditor(Player player, int page) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_ICONS_TITLE + (page + 1));
-        fillGui(inventory);
+        
         List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
         int maxPage = Math.max(0, (worlds.size() - 1) / 44);
         page = Math.max(0, Math.min(page, maxPage));
@@ -871,7 +871,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openWorldSlotEditor(Player player, int page) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SLOTS_TITLE + (page + 1));
-        fillGui(inventory);
+        
         List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
         int maxPage = Math.max(0, (worlds.size() - 1) / 45);
         page = Math.max(0, Math.min(page, maxPage));
@@ -893,7 +893,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openSlotPicker(Player player, World world) {
         int size = getConfig().getInt("menu.size", 27) == 54 ? 54 : 27;
         Inventory inventory = Bukkit.createInventory(null, size, GUI_SLOT_PICKER_PREFIX + world.getName());
-        fillGui(inventory);
+        
         int closeSlot = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
         int previous = size == 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
         int next = size == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
@@ -1048,7 +1048,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openMessageEditor(Player player, int requestedPage) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_MESSAGES_TITLE + (requestedPage + 1));
-        fillGui(inventory);
+        
         List<String> keys = editableMessageKeys();
         int maxPage = Math.max(0, (keys.size() - 1) / 44);
         int page = Math.max(0, Math.min(requestedPage, maxPage));
@@ -1079,7 +1079,7 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openSettingsGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_SETTINGS_TITLE);
-        fillGui(inventory);
+        
         inventory.setItem(4, guiItem(Material.NETHER_STAR, "&6&lRTP SETTINGS",
                 "&8&m--------------------",
                 "&7Fine-tune RTP behavior and safety.",
@@ -1235,7 +1235,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxPage = Math.max(0, (worlds.size() - 1) / 45);
         page = Math.max(0, Math.min(page, maxPage));
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_PREFIX + (page + 1));
-        fillGui(inventory);
+        
         List<String> disabled = getConfig().getStringList("disabled-worlds");
 
         int start = page * 45;
@@ -1284,7 +1284,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxPage = Math.max(0, (worlds.size() - 1) / pageSize);
         int page = Math.max(0, Math.min(requestedPage, maxPage));
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SETTINGS_SELECT_TITLE + (page + 1));
-        fillGui(inventory);
+        
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&6&lPER-WORLD RTP SETTINGS",
                 "&8&m--------------------",
                 "&7Select a loaded world to edit its RTP settings.",
@@ -1319,7 +1319,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openWorldSettingsGui(Player player, World world) {
         String title = GUI_WORLD_SETTINGS_PREFIX + world.getName();
         Inventory inventory = Bukkit.createInventory(null, 54, title);
-        fillGui(inventory);
+        
         int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
         int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
         int minY = worldInt(world, "minimum-y", world.getMinHeight());
@@ -1378,7 +1378,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private void openWorldAreaGui(Player player, World world) {
         String title = GUI_WORLD_AREA_PREFIX + world.getName();
         Inventory inventory = Bukkit.createInventory(null, 54, title);
-        fillGui(inventory);
+        
         String base = "world-areas." + world.getName() + ".";
         inventory.setItem(4, guiItem(Material.FILLED_MAP, "&b&lRECTANGULAR RTP AREA",
                 "&7World: &f" + world.getName(),
