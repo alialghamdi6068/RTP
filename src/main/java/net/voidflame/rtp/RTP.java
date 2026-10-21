@@ -692,6 +692,8 @@ public final class RTP extends JavaPlugin implements Listener {
                         if (radius > 0 && Math.abs(dx) != radius && Math.abs(dz) != radius) continue;
                         int candidateX = x + dx, candidateZ = z + dz;
                         if ((candidateX >> 4) != (x >> 4) || (candidateZ >> 4) != (z >> 4)) continue;
+                        if (!isWithinSearchBounds(candidateX, candidateZ, minRadius, maxRadius,
+                                centerX, centerZ, customArea, minX, maxX, minZ, maxZ)) continue;
                         if (!world.getWorldBorder().isInside(new Location(world, candidateX + 0.5,
                                 world.getMinHeight(), candidateZ + 0.5))) continue;
                         Block ground = world.getHighestBlockAt(candidateX, candidateZ);
@@ -700,6 +702,7 @@ public final class RTP extends JavaPlugin implements Listener {
                         Material groundType = ground.getType();
                         Block feet = ground.getRelative(0, 1, 0), head = ground.getRelative(0, 2, 0);
                         if (!groundType.isSolid() || !feet.isPassable() || !head.isPassable()
+                                || isUnsafe(groundType) || isUnsafe(feet.getType()) || isUnsafe(head.getType())
                                 || groundType == Material.LAVA || feet.getType() == Material.LAVA || head.getType() == Material.LAVA
                                 || groundType == Material.WATER || feet.getType() == Material.WATER || head.getType() == Material.WATER
                                 || groundType == Material.BUBBLE_COLUMN || feet.getType() == Material.BUBBLE_COLUMN
@@ -727,6 +730,7 @@ public final class RTP extends JavaPlugin implements Listener {
                             cooldowns.put(playerId, System.currentTimeMillis());
                             saveCooldowns();
                         }
+                        sendSuccessMessage(player, safeDestination);
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 1.0f);
                     }));
         } catch (RuntimeException exception) {
@@ -1859,21 +1863,11 @@ public final class RTP extends JavaPlugin implements Listener {
 
         int minRadius = getConfig().getInt("minimum-radius", 1000);
         int maxRadius = getConfig().getInt("maximum-radius", 50000);
-        // Migrate the previous bundled defaults while preserving deliberate custom values.
-        if (minRadius == 100 && maxRadius == 5000) {
-            minRadius = 1000;
-            maxRadius = 50000;
-            getConfig().set("minimum-radius", minRadius);
-            getConfig().set("maximum-radius", maxRadius);
-        }
         if (minRadius < 0 || minRadius > 30_000_000 || maxRadius <= minRadius || maxRadius > 30_000_000) {
             getLogger().warning("Invalid RTP radius values; restoring minimum-radius=1000 and maximum-radius=50000.");
             getConfig().set("minimum-radius", 1000);
             getConfig().set("maximum-radius", 50000);
         }
-        if (getConfig().getInt("countdown-seconds", 5) == 5) getConfig().set("countdown-seconds", 0);
-        if (!getConfig().getBoolean("load-chunks", true)) getConfig().set("load-chunks", true);
-
         int maxSearches = getConfig().getInt("maximum-active-searches", 25);
         if (maxSearches < 1 || maxSearches > 500) {
             getLogger().warning("maximum-active-searches must be between 1 and 500; using 25.");
@@ -2025,6 +2019,29 @@ public final class RTP extends JavaPlugin implements Listener {
         } catch (IOException exception) {
             getLogger().warning("Could not save RTP cooldowns: " + exception.getMessage());
         }
+    }
+
+    static boolean isWithinSearchBounds(int x, int z, int minRadius, int maxRadius,
+                                        int centerX, int centerZ, boolean customArea,
+                                        int minX, int maxX, int minZ, int maxZ) {
+        if (customArea) return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
+        long dx = (long) x - centerX;
+        long dz = (long) z - centerZ;
+        long distanceSquared = dx * dx + dz * dz;
+        long minSquared = (long) minRadius * minRadius;
+        long maxSquared = (long) maxRadius * maxRadius;
+        return distanceSquared >= minSquared && distanceSquared <= maxSquared;
+    }
+
+    private void sendSuccessMessage(Player player, Location destination) {
+        String prefix = getConfig().getString("messages.prefix", "&8[&5&lRTP&8] &r");
+        String text = getConfig().getString("messages.success",
+                "&aSuccess: &7Teleported to &f%x%, %y%, %z% &7in &d%world%&7.");
+        text = text.replace("%x%", Integer.toString(destination.getBlockX()))
+                .replace("%y%", Integer.toString(destination.getBlockY()))
+                .replace("%z%", Integer.toString(destination.getBlockZ()))
+                .replace("%world%", destination.getWorld() == null ? "" : destination.getWorld().getName());
+        player.sendMessage(color(prefix + text));
     }
 
     private String message(String key) {
