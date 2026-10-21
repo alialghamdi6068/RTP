@@ -19,7 +19,7 @@ avoid-water: true
 # إعدادات قائمة اختيار العالم
 # الأحجام المدعومة هي 27 أو 54 خانة، وتُستخدم الصفحات تلقائيًا عند الحاجة.
 menu:
-  title: "&8&lRandom Teleport"
+  title: "&8&lRANDOM TELEPORT"
   size: 27
   filler: true
   close-slot: 22
