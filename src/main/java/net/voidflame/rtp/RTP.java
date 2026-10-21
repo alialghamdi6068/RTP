@@ -839,11 +839,12 @@ public final class RTP extends JavaPlugin implements Listener {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_ICONS_TITLE + (page + 1));
         fillGui(inventory);
         List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
-        int maxPage = Math.max(0, (worlds.size() - 1) / 45);
+        int maxPage = Math.max(0, (worlds.size() - 1) / 44);
         page = Math.max(0, Math.min(page, maxPage));
         inventory.setItem(4, guiItem(Material.ITEM_FRAME, "&b&lPER-WORLD ICONS", "&7Click a world to cycle its icon."));
         for (int i = 0; i < 45; i++) {
-            int index = page * 45 + i;
+            if (i == 4) continue;
+            int index = page * 44 + (i > 4 ? i - 1 : i);
             if (index >= worlds.size()) break;
             World world = worlds.get(index);
             Material icon = Material.matchMaterial(getConfig().getString("menu.world-icons." + world.getName(), defaultWorldIcon(world).name()));
