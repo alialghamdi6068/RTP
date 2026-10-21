@@ -26,18 +26,18 @@ class RtpConfigTest {
     void defaultTeleportLimitsAreSafeAndConsistent() {
         YamlConfiguration config = loadDefaultConfig();
 
-        assertEquals(5, config.getInt("countdown-seconds"));
+        assertEquals(0, config.getInt("countdown-seconds"), "RTP should teleport immediately by default");
         assertEquals(30, config.getInt("cooldown-seconds"));
         assertTrue(config.getInt("minimum-radius") >= 0);
         assertTrue(config.getInt("maximum-radius") > config.getInt("minimum-radius"));
-        assertEquals(30, config.getInt("maximum-attempts"));
+        assertEquals(200, config.getInt("maximum-attempts"));
         assertTrue(config.getInt("maximum-attempts") >= 1);
         assertTrue(config.getInt("maximum-attempts") <= 200);
         assertTrue(config.getInt("maximum-active-searches") >= 1);
         assertTrue(config.getInt("maximum-active-searches") <= 500);
         assertTrue(config.getInt("search-timeout-seconds") >= 5);
         assertTrue(config.getInt("search-timeout-seconds") <= 120);
-        assertFalse(config.getBoolean("load-chunks"), "Chunk generation should be opt-in by default");
+        assertTrue(config.getBoolean("load-chunks"), "Async chunk loading should be enabled for reliable RTP by default");
         assertTrue(config.getBoolean("avoid-water"), "Water should be rejected by default");
     }
 
