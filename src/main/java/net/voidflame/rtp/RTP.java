@@ -1012,7 +1012,7 @@ public final class RTP extends JavaPlugin implements Listener {
         Inventory inventory = Bukkit.createInventory(null, 54, GUI_MESSAGES_TITLE + (requestedPage + 1));
         fillGui(inventory);
         List<String> keys = editableMessageKeys();
-        int maxPage = Math.max(0, (keys.size() - 1) / 45);
+        int maxPage = Math.max(0, (keys.size() - 1) / 44);
         int page = Math.max(0, Math.min(requestedPage, maxPage));
         inventory.setItem(4, guiItem(Material.WRITABLE_BOOK, "&b&lMESSAGE EDITOR",
                 "&7Click any message to edit it in chat.",
@@ -1020,7 +1020,8 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Edits save immediately to config.yml.",
                 "&7Configured messages: &f" + keys.size()));
         for (int slot = 0; slot < 45; slot++) {
-            int index = page * 45 + slot;
+            if (slot == 4) continue;
+            int index = page * 44 + (slot > 4 ? slot - 1 : slot);
             if (index >= keys.size()) break;
             String key = keys.get(index);
             String value = getConfig().getString("messages." + key, "");
@@ -1577,12 +1578,12 @@ public final class RTP extends JavaPlugin implements Listener {
             try { page = Integer.parseInt(title.substring(GUI_MESSAGES_TITLE.length())) - 1; }
             catch (NumberFormatException exception) { player.closeInventory(); return; }
             List<String> keys = editableMessageKeys();
-            int maxPage = Math.max(0, (keys.size() - 1) / 45);
+            int maxPage = Math.max(0, (keys.size() - 1) / 44);
             if (slot == 49) { openMainGui(player); return; }
             if (slot == 45) { if (page > 0) openMessageEditor(player, page - 1); return; }
             if (slot == 53) { if (page < maxPage) openMessageEditor(player, page + 1); return; }
-            if (slot >= 45) return;
-            int index = page * 45 + slot;
+            if (slot >= 45 || slot == 4) return;
+            int index = page * 44 + (slot > 4 ? slot - 1 : slot);
             if (index >= keys.size()) return;
             String key = keys.get(index);
             pendingMessageEdits.put(player.getUniqueId(), key);
