@@ -23,6 +23,20 @@ class RtpConfigTest {
     }
 
     @Test
+    void candidateBoundsRespectRadiusAndCustomArea() {
+        assertTrue(RTP.isWithinSearchBounds(1000, 0, 1000, 50000, 0, 0,
+                false, 0, 0, 0, 0));
+        assertFalse(RTP.isWithinSearchBounds(999, 0, 1000, 50000, 0, 0,
+                false, 0, 0, 0, 0));
+        assertFalse(RTP.isWithinSearchBounds(50001, 0, 1000, 50000, 0, 0,
+                false, 0, 0, 0, 0));
+        assertTrue(RTP.isWithinSearchBounds(10, -20, 1000, 50000, 0, 0,
+                true, 0, 10, -20, 30));
+        assertFalse(RTP.isWithinSearchBounds(11, -20, 1000, 50000, 0, 0,
+                true, 0, 10, -20, 30));
+    }
+
+    @Test
     void defaultTeleportLimitsAreSafeAndConsistent() {
         YamlConfiguration config = loadDefaultConfig();
 
