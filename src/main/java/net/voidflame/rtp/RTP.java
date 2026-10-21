@@ -42,12 +42,15 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
     private final java.util.Set<UUID> pendingTitleEdits = new java.util.HashSet<>();
+    private final java.util.Set<UUID> pendingAdminTitleEdits = new java.util.HashSet<>();
     private final Map<UUID, String> pendingMessageEdits = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, Integer> messageEditorPages = new HashMap<>();
     private File cooldownFile;
     private YamlConfiguration cooldownData;
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
-    private static final String GUI_MAIN_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Control Center";
+    private String adminMainTitle() {
+        return color(getConfig().getString("admin-menu.title", "&5&lRTP Control Center"));
+    }
     private static final String GUI_SETTINGS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Settings";
     private static final String GUI_MESSAGES_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Message Editor | Page ";
     private static final String GUI_WORLD_SETTINGS_SELECT_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Select RTP World | Page ";
@@ -112,6 +115,7 @@ public final class RTP extends JavaPlugin implements Listener {
         searches.clear();
         searchTokens.clear();
         pendingTitleEdits.clear();
+        pendingAdminTitleEdits.clear();
         pendingMessageEdits.clear();
         messageEditorPages.clear();
         saveCooldowns();
@@ -207,7 +211,7 @@ public final class RTP extends JavaPlugin implements Listener {
             return true;
         }
         if (args.length == 0) {
-            openPlayerGui(player);
+            requestTeleport(player, player.getWorld());
             return true;
         }
         String destination = args[0].toLowerCase(java.util.Locale.ROOT);
@@ -706,7 +710,7 @@ public final class RTP extends JavaPlugin implements Listener {
     }
 
     private void openMainGui(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 27, GUI_MAIN_TITLE);
+        Inventory inventory = Bukkit.createInventory(null, 27, adminMainTitle());
         fillGui(inventory);
 
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&5&lRTP ADMIN",
@@ -804,6 +808,10 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(24, guiItem(Material.CHEST, "&b&lWORLD BUTTON POSITIONS",
                 "&7Choose the exact slot for each world's button.",
                 "", "&b▶ Arrange world buttons"));
+        inventory.setItem(26, guiItem(Material.NAME_TAG, "&5&lADMIN GUI TITLE",
+                "&7Current: &f" + getConfig().getString("admin-menu.title", "&5&lRTP Control Center"),
+                "&7Independent from the player menu title.",
+                "&7Supports & color codes.", "", "&d▶ Change admin title"));
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE BUTTON POSITION",
                 "&7Current slot: &f" + closeSlot,
                 "&7Cycles through safe bottom-row positions.",
@@ -930,6 +938,29 @@ public final class RTP extends JavaPlugin implements Listener {
             });
             return;
         }
+        if (pendingAdminTitleEdits.contains(id)) {
+            event.setCancelled(true);
+            String adminTitle = event.getMessage().trim();
+            Bukkit.getScheduler().runTask(this, () -> {
+                Player player = Bukkit.getPlayer(id);
+                if (player == null || !pendingAdminTitleEdits.remove(id)) return;
+                if (adminTitle.equalsIgnoreCase("cancel")) {
+                    player.sendMessage(color("&eAdmin title change cancelled."));
+                    openAppearanceGui(player);
+                    return;
+                }
+                if (adminTitle.isBlank() || adminTitle.length() > 64) {
+                    player.sendMessage(color("&cTitle must contain 1–64 characters. Type it again or cancel."));
+                    pendingAdminTitleEdits.add(id);
+                    return;
+                }
+                getConfig().set("admin-menu.title", adminTitle);
+                saveConfig();
+                player.sendMessage(color("&aAdmin GUI title saved independently."));
+                openAppearanceGui(player);
+            });
+            return;
+        }
         if (!pendingTitleEdits.contains(id)) return;
         event.setCancelled(true);
         String typed = event.getMessage().trim();
@@ -978,6 +1009,12 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             case 20 -> { openWorldIconEditor(player, 0); return; }
             case 24 -> { openWorldSlotEditor(player, 0); return; }
+            case 26 -> {
+                pendingAdminTitleEdits.add(player.getUniqueId());
+                player.closeInventory();
+                player.sendMessage(color("&dRTP &8» &7Type the new admin GUI title in chat. Use &f& &7for colors, or type cancel."));
+                return;
+            }
             case 22 -> {
                 int menuSize = getConfig().getInt("menu.size", 27);
                 int[] positions = menuSize == 27 ? new int[]{20, 22, 24} : new int[]{46, 49, 52};
@@ -1540,7 +1577,7 @@ public final class RTP extends JavaPlugin implements Listener {
     public void onWorldGuiClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (title.equals(GUI_MAIN_TITLE)) {
+        if (title.equals(adminMainTitle())) {
             event.setCancelled(true);
             if (!player.hasPermission("rtp.admin")) {
                 player.closeInventory();
