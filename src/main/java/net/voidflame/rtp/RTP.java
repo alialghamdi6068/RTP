@@ -576,7 +576,56 @@ public final class RTP extends JavaPlugin implements Listener {
                 candidates[i * 2 + 1] = centerZ + (int) Math.round(Math.sin(angle) * distance);
             }
         }
+
+        // Fast path: test already-loaded chunks first. This avoids waiting for chunk generation
+        // when the world already has safe destinations inside the configured RTP area.
+        int[] randomFallbackCandidates = candidates.clone();
+        int loadedCandidateCount = prioritizeLoadedCandidates(world, candidates, attempts,
+                minRadius, maxRadius, centerX, centerZ, customArea, minX, maxX, minZ, maxZ);
+        for (int i = loadedCandidateCount; i < attempts; i++) {
+            candidates[i * 2] = randomFallbackCandidates[(i - loadedCandidateCount) * 2];
+            candidates[i * 2 + 1] = randomFallbackCandidates[(i - loadedCandidateCount) * 2 + 1];
+        }
         searchCandidate(player, world, candidates, attempts, 0, searchToken);
+    }
+
+    private int prioritizeLoadedCandidates(World world, int[] candidates, int attempts,
+                                           int minRadius, int maxRadius, int centerX, int centerZ,
+                                           boolean customArea, int minX, int maxX, int minZ, int maxZ) {
+        org.bukkit.Chunk[] loadedChunks = world.getLoadedChunks();
+        if (loadedChunks.length == 0) return 0;
+
+        List<org.bukkit.Chunk> shuffledChunks = new ArrayList<>(java.util.Arrays.asList(loadedChunks));
+        java.util.Collections.shuffle(shuffledChunks, random);
+        long minDistanceSquared = (long) minRadius * minRadius;
+        long maxDistanceSquared = (long) maxRadius * maxRadius;
+        int count = 0;
+
+        for (org.bukkit.Chunk chunk : shuffledChunks) {
+            if (count >= attempts) break;
+            int baseX = chunk.getX() << 4;
+            int baseZ = chunk.getZ() << 4;
+
+            // Sample a few positions in each loaded chunk so edge chunks can still contribute.
+            for (int sample = 0; sample < 4 && count < attempts; sample++) {
+                int x = baseX + random.nextInt(16);
+                int z = baseZ + random.nextInt(16);
+                if (customArea) {
+                    if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
+                } else {
+                    long dx = (long) x - centerX;
+                    long dz = (long) z - centerZ;
+                    long distanceSquared = dx * dx + dz * dz;
+                    if (distanceSquared < minDistanceSquared || distanceSquared > maxDistanceSquared) continue;
+                }
+                if (!world.getWorldBorder().isInside(new Location(world, x + 0.5, world.getMinHeight(), z + 0.5))) continue;
+                candidates[count * 2] = x;
+                candidates[count * 2 + 1] = z;
+                count++;
+                break;
+            }
+        }
+        return count;
     }
 
     private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index, UUID searchToken) {
