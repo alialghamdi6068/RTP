@@ -14,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.Sound;
 import net.kyori.adventure.text.Component;
@@ -40,6 +41,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, BukkitTask> searchTimeouts = new HashMap<>();
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
+    private final java.util.Set<UUID> pendingTitleEdits = new java.util.HashSet<>();
     private File cooldownFile;
     private YamlConfiguration cooldownData;
     private static final String GUI_PREFIX = ChatColor.DARK_PURPLE + "RTP Worlds | Page ";
@@ -106,6 +108,7 @@ public final class RTP extends JavaPlugin implements Listener {
         searchTimeouts.clear();
         searches.clear();
         searchTokens.clear();
+        pendingTitleEdits.clear();
         saveCooldowns();
     }
 
@@ -372,7 +375,8 @@ public final class RTP extends JavaPlugin implements Listener {
                 default -> world.getName().equalsIgnoreCase("world") ? "OVERWORLD" : world.getName().toUpperCase(java.util.Locale.ROOT);
             };
             String iconStyle = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
-            Material icon = switch (iconStyle) {
+            Material icon = Material.matchMaterial(getConfig().getString("menu.world-icons." + world.getName(), ""));
+            if (icon == null || !icon.isItem()) icon = switch (iconStyle) {
                 case "CLASSIC" -> switch (world.getEnvironment()) {
                     case NETHER -> Material.NETHER_BRICK;
                     case THE_END -> Material.ENDER_EYE;
@@ -383,11 +387,7 @@ public final class RTP extends JavaPlugin implements Listener {
                     case THE_END -> Material.PURPLE_CONCRETE;
                     default -> Material.LIME_CONCRETE;
                 };
-                default -> switch (world.getEnvironment()) {
-                    case NETHER -> Material.NETHERRACK;
-                    case THE_END -> Material.END_STONE;
-                    default -> Material.GRASS_BLOCK;
-                };
+                default -> defaultWorldIcon(world);
             };
             inventory.setItem(slots.get(i), guiItem(icon, "&f&l" + name,
                     "&7Randomly teleport to this dimension.",
@@ -768,10 +768,10 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(4, guiItem(Material.PAINTING, "&d&lPLAYER MENU APPEARANCE",
                 "&7These options change the menu players see with /rtp.",
                 "&7Changes save automatically."));
-        inventory.setItem(10, guiItem(Material.NAME_TAG, "&f&lMENU TITLE",
+        inventory.setItem(10, guiItem(Material.NAME_TAG, "&f&lCUSTOM MENU TITLE",
                 "&7Current: &f" + getConfig().getString("menu.title", "&8&lRANDOM TELEPORT"),
-                "&7Preset " + (titleIndex + 1) + " of " + titles.size(),
-                "", "&d▶ Click to cycle title"));
+                "&7Type any title in chat. Color codes with &f& &7work.",
+                "", "&d▶ Click, then type title"));
         inventory.setItem(12, guiItem(size == 27 ? Material.CHEST : Material.TRAPPED_CHEST,
                 "&f&lMENU SIZE: &d" + size + " SLOTS",
                 "&7Switch between compact 27-slot and",
@@ -785,6 +785,12 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Current: &f" + iconStyle,
                 "&7Cycle the icons used for destinations.",
                 "", "&d▶ Click to cycle icons"));
+        inventory.setItem(20, guiItem(Material.ITEM_FRAME, "&b&lPER-WORLD ICONS",
+                "&7Choose a separate icon for each loaded world.",
+                "", "&b▶ Edit world icons"));
+        inventory.setItem(24, guiItem(Material.CHEST, "&b&lWORLD BUTTON POSITIONS",
+                "&7Choose the exact slot for each world's button.",
+                "", "&b▶ Arrange world buttons"));
         inventory.setItem(22, guiItem(Material.BARRIER, "&c&lCLOSE BUTTON POSITION",
                 "&7Current slot: &f" + closeSlot,
                 "&7Cycles through safe bottom-row positions.",
@@ -794,14 +800,127 @@ public final class RTP extends JavaPlugin implements Listener {
         player.openInventory(inventory);
     }
 
+
+    private static final String GUI_WORLD_ICONS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP World Icons | Page ";
+    private static final String GUI_WORLD_SLOTS_TITLE = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "RTP Button Slots | Page ";
+    private static final String GUI_SLOT_PICKER_PREFIX = ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Choose Slot | ";
+
+    private Material defaultWorldIcon(World world) {
+        return switch (world.getEnvironment()) {
+            case NETHER -> Material.NETHERRACK;
+            case THE_END -> Material.END_STONE;
+            default -> Material.GRASS_BLOCK;
+        };
+    }
+
+    private List<Material> worldIconChoices() {
+        return List.of(Material.GRASS_BLOCK, Material.COMPASS, Material.LIME_CONCRETE,
+                Material.NETHERRACK, Material.NETHER_BRICK, Material.RED_CONCRETE,
+                Material.END_STONE, Material.ENDER_EYE, Material.PURPLE_CONCRETE,
+                Material.DIAMOND, Material.EMERALD, Material.ENDER_PEARL, Material.MAP,
+                Material.CHEST, Material.NETHER_STAR);
+    }
+
+    private int defaultSlotForWorld(World world) {
+        return switch (world.getName().toLowerCase(java.util.Locale.ROOT)) {
+            case "world" -> 11;
+            case "world_nether" -> 13;
+            case "world_the_end" -> 15;
+            default -> 20;
+        };
+    }
+
+    private void openWorldIconEditor(Player player, int page) {
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_ICONS_TITLE + (page + 1));
+        fillGui(inventory);
+        List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+        int maxPage = Math.max(0, (worlds.size() - 1) / 45);
+        page = Math.max(0, Math.min(page, maxPage));
+        inventory.setItem(4, guiItem(Material.ITEM_FRAME, "&b&lPER-WORLD ICONS", "&7Click a world to cycle its icon."));
+        for (int i = 0; i < 45; i++) {
+            int index = page * 45 + i;
+            if (index >= worlds.size()) break;
+            World world = worlds.get(index);
+            Material icon = Material.matchMaterial(getConfig().getString("menu.world-icons." + world.getName(), defaultWorldIcon(world).name()));
+            if (icon == null || !icon.isItem()) icon = defaultWorldIcon(world);
+            inventory.setItem(i, guiItem(icon, "&f&l" + world.getName(), "&7Current icon: &f" + icon.name(), "", "&b▶ Click to cycle"));
+        }
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE"));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK"));
+        inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE"));
+        player.openInventory(inventory);
+    }
+
+    private void openWorldSlotEditor(Player player, int page) {
+        Inventory inventory = Bukkit.createInventory(null, 54, GUI_WORLD_SLOTS_TITLE + (page + 1));
+        fillGui(inventory);
+        List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+        int maxPage = Math.max(0, (worlds.size() - 1) / 45);
+        page = Math.max(0, Math.min(page, maxPage));
+        inventory.setItem(4, guiItem(Material.CHEST, "&b&lWORLD BUTTON POSITIONS", "&7Click a world to choose its player-menu slot."));
+        for (int i = 0; i < 45; i++) {
+            int index = page * 45 + i;
+            if (index >= worlds.size()) break;
+            World world = worlds.get(index);
+            int current = getConfig().getInt("menu.world-slots." + world.getName(), defaultSlotForWorld(world));
+            inventory.setItem(i, guiItem(Material.PAPER, "&f&l" + world.getName(), "&7Current slot: &f" + current, "", "&b▶ Click to arrange"));
+        }
+        inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE"));
+        inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK"));
+        inventory.setItem(53, guiItem(Material.ARROW, "&e&lNEXT PAGE"));
+        player.openInventory(inventory);
+    }
+
+    private void openSlotPicker(Player player, World world) {
+        int size = getConfig().getInt("menu.size", 27) == 54 ? 54 : 27;
+        Inventory inventory = Bukkit.createInventory(null, size, GUI_SLOT_PICKER_PREFIX + world.getName());
+        fillGui(inventory);
+        int closeSlot = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
+        int previous = size == 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
+        int next = size == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
+        for (int i = 0; i < size; i++) {
+            if (i == 4 || i == closeSlot || i == previous || i == next) continue;
+            inventory.setItem(i, guiItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE, "&fSlot " + i, "&7Place " + world.getName() + " here."));
+        }
+        inventory.setItem(4, guiItem(Material.COMPASS, "&b&lCHOOSE SLOT", "&7Reserved navigation slots cannot be selected."));
+        player.openInventory(inventory);
+    }
+
+    @EventHandler
+    public void onCustomTitleChat(AsyncPlayerChatEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        if (!pendingTitleEdits.contains(id)) return;
+        event.setCancelled(true);
+        String typed = event.getMessage().trim();
+        Bukkit.getScheduler().runTask(this, () -> {
+            Player player = Bukkit.getPlayer(id);
+            if (player == null || !pendingTitleEdits.remove(id)) return;
+            if (typed.equalsIgnoreCase("cancel")) {
+                player.sendMessage(color("&dRTP &8» &7Title change cancelled."));
+                openAppearanceGui(player);
+                return;
+            }
+            if (typed.isBlank() || typed.length() > 64) {
+                player.sendMessage(color("&cTitle must contain 1–64 characters. Type it again or cancel."));
+                pendingTitleEdits.add(id);
+                return;
+            }
+            getConfig().set("menu.title", typed);
+            saveConfig();
+            player.sendMessage(color("&aRTP menu title saved."));
+            openAppearanceGui(player);
+        });
+    }
+
     private void handleAppearanceClick(Player player, int slot) {
         List<String> titles = List.of("&8&lRANDOM TELEPORT", "&5&lRTP SELECTOR", "&1&lDESTINATION SELECTOR", "&0&lWHERE TO?");
         int size = getConfig().getInt("menu.size", 27);
         switch (slot) {
             case 10 -> {
-                String current = getConfig().getString("menu.title", titles.get(0));
-                int index = titles.indexOf(current);
-                getConfig().set("menu.title", titles.get((index + 1 + titles.size()) % titles.size()));
+                pendingTitleEdits.add(player.getUniqueId());
+                player.closeInventory();
+                player.sendMessage(color("&dRTP &8» &7Type the new menu title in chat. Use &f& &7for colors, or type cancel."));
+                return;
             }
             case 12 -> {
                 int nextSize = size == 27 ? 54 : 27;
@@ -816,6 +935,8 @@ public final class RTP extends JavaPlugin implements Listener {
                 int index = styles.indexOf(current);
                 getConfig().set("menu.icon-style", styles.get((index + 1 + styles.size()) % styles.size()));
             }
+            case 20 -> { openWorldIconEditor(player, 0); return; }
+            case 24 -> { openWorldSlotEditor(player, 0); return; }
             case 22 -> {
                 int menuSize = getConfig().getInt("menu.size", 27);
                 int[] positions = menuSize == 27 ? new int[]{20, 22, 24} : new int[]{46, 49, 52};
@@ -1357,6 +1478,73 @@ public final class RTP extends JavaPlugin implements Listener {
             } else if (slot == 22) {
                 player.closeInventory();
             }
+            return;
+        }
+
+        if (title.startsWith(GUI_WORLD_ICONS_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= 54) return;
+            int page;
+            try { page = Integer.parseInt(title.substring(GUI_WORLD_ICONS_TITLE.length())) - 1; }
+            catch (NumberFormatException exception) { player.closeInventory(); return; }
+            if (slot == 49) { openAppearanceGui(player); return; }
+            List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+            int maxPage = Math.max(0, (worlds.size() - 1) / 45);
+            if (slot == 45) { if (page > 0) openWorldIconEditor(player, page - 1); return; }
+            if (slot == 53) { if (page < maxPage) openWorldIconEditor(player, page + 1); return; }
+            if (slot >= 45) return;
+            int index = page * 45 + slot;
+            if (index >= worlds.size()) return;
+            World world = worlds.get(index);
+            String path = "menu.world-icons." + world.getName();
+            Material current = Material.matchMaterial(getConfig().getString(path, defaultWorldIcon(world).name()));
+            List<Material> choices = worldIconChoices();
+            int currentIndex = choices.indexOf(current);
+            getConfig().set(path, choices.get((currentIndex + 1 + choices.size()) % choices.size()).name());
+            saveConfig();
+            openWorldIconEditor(player, page);
+            return;
+        }
+        if (title.startsWith(GUI_WORLD_SLOTS_TITLE)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= 54) return;
+            int page;
+            try { page = Integer.parseInt(title.substring(GUI_WORLD_SLOTS_TITLE.length())) - 1; }
+            catch (NumberFormatException exception) { player.closeInventory(); return; }
+            if (slot == 49) { openAppearanceGui(player); return; }
+            List<World> worlds = new ArrayList<>(Bukkit.getWorlds());
+            int maxPage = Math.max(0, (worlds.size() - 1) / 45);
+            if (slot == 45) { if (page > 0) openWorldSlotEditor(player, page - 1); return; }
+            if (slot == 53) { if (page < maxPage) openWorldSlotEditor(player, page + 1); return; }
+            if (slot >= 45) return;
+            int index = page * 45 + slot;
+            if (index >= worlds.size()) return;
+            openSlotPicker(player, worlds.get(index));
+            return;
+        }
+        if (title.startsWith(GUI_SLOT_PICKER_PREFIX)) {
+            event.setCancelled(true);
+            if (!player.hasPermission("rtp.admin")) { player.closeInventory(); return; }
+            int slot = event.getRawSlot();
+            if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) return;
+            World world = Bukkit.getWorld(title.substring(GUI_SLOT_PICKER_PREFIX.length()));
+            if (world == null) { player.closeInventory(); return; }
+            int size = event.getView().getTopInventory().getSize();
+            int closeSlot = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
+            int previous = size == 27 ? PLAYER_MENU_PREVIOUS_SLOT_27 : PLAYER_MENU_PREVIOUS_SLOT_54;
+            int next = size == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
+            if (slot == 4 || slot == closeSlot || slot == previous || slot == next) return;
+            boolean occupied = Bukkit.getWorlds().stream().filter(other -> !other.equals(world))
+                    .anyMatch(other -> getConfig().getInt("menu.world-slots." + other.getName(), defaultSlotForWorld(other)) == slot);
+            if (occupied) { player.sendMessage(color("&cThat slot is already assigned to another world.")); return; }
+            getConfig().set("menu.world-slots." + world.getName(), slot);
+            saveConfig();
+            player.sendMessage(color("&aSaved slot &f" + slot + " &afor &f" + world.getName() + "&a."));
+            openWorldSlotEditor(player, 0);
             return;
         }
         if (title.equals(GUI_APPEARANCE_TITLE)) {
