@@ -198,10 +198,30 @@ public final class RTP extends JavaPlugin implements Listener {
             return true;
         }
         if (args.length == 0) {
-            requestTeleport(player, player.getWorld());
+            openPlayerGui(player);
             return true;
         }
-        World selectedWorld = Bukkit.getWorld(args[0]);
+        String destination = args[0].toLowerCase(java.util.Locale.ROOT);
+        World selectedWorld;
+        if (destination.equals("overworld")) {
+            selectedWorld = Bukkit.getWorlds().stream()
+                    .filter(candidate -> candidate.getEnvironment() == World.Environment.NORMAL)
+                    .filter(candidate -> candidate.getName().equalsIgnoreCase("world"))
+                    .findFirst()
+                    .orElseGet(() -> Bukkit.getWorlds().stream()
+                            .filter(candidate -> candidate.getEnvironment() == World.Environment.NORMAL)
+                            .findFirst().orElse(null));
+        } else if (destination.equals("nether")) {
+            selectedWorld = Bukkit.getWorlds().stream()
+                    .filter(candidate -> candidate.getEnvironment() == World.Environment.NETHER)
+                    .findFirst().orElse(null);
+        } else if (destination.equals("end") || destination.equals("the_end")) {
+            selectedWorld = Bukkit.getWorlds().stream()
+                    .filter(candidate -> candidate.getEnvironment() == World.Environment.THE_END)
+                    .findFirst().orElse(null);
+        } else {
+            selectedWorld = Bukkit.getWorld(args[0]);
+        }
         if (selectedWorld == null) {
             player.sendMessage(message("world-not-found"));
             return true;
@@ -476,7 +496,7 @@ public final class RTP extends JavaPlugin implements Listener {
             if (finishSearch(playerId, searchToken)) sendRtpMessage(player, "timeout");
         }, timeoutSeconds * 20L));
         int maxActiveSearches = Math.max(1, Math.min(500, getConfig().getInt("maximum-active-searches", 25)));
-        if (searches.size() >= maxActiveSearches) {
+        if (searches.size() > maxActiveSearches) {
             finishSearch(playerId, searchToken);
             sendRtpMessage(player, "busy");
             return;
