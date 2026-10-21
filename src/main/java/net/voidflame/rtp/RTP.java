@@ -360,8 +360,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int configuredMenuSize = getConfig().getInt("menu.size", 27);
         int menuSize = configuredMenuSize == 54 ? 54 : 27;
         Inventory inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(Math.max(0, requestedPage)));
-        if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-        // Keep the player-facing selector minimal: the inventory title labels the menu,
+         // Keep the player-facing selector minimal: the inventory title labels the menu,
         // and the dimension buttons carry the useful destination details.
 
         List<World> selectable = getSelectableWorlds();
@@ -372,8 +371,7 @@ public final class RTP extends JavaPlugin implements Listener {
         // Recreate with the clamped page so click handling always reflects the visible page.
         if (page != Math.max(0, requestedPage)) {
             inventory = Bukkit.createInventory(null, menuSize, playerMenuPageTitle(page));
-            if (getConfig().getBoolean("menu.filler", true)) fillGui(inventory);
-        }
+         }
 
         for (int i = 0; i < pageSize; i++) {
             int worldIndex = page * pageSize + i;
@@ -711,7 +709,6 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void openMainGui(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 27, adminMainTitle());
-        fillGui(inventory);
 
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&5&lRTP ADMIN",
                 "&8&m--------------------",
@@ -753,7 +750,7 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(18, guiItem(Material.PAINTING, "&d&lPLAYER MENU APPEARANCE",
                 "&8&m--------------------",
                 "&7Change the /rtp menu title, size,",
-                "&7filler, close-button position and icons.",
+                "&7layout, close-button position and icons.",
                 "",
                 "&d▶ Customize player menu"));
 
@@ -779,7 +776,6 @@ public final class RTP extends JavaPlugin implements Listener {
         List<String> titles = List.of("&8&lRANDOM TELEPORT", "&5&lRTP SELECTOR", "&1&lDESTINATION SELECTOR", "&0&lWHERE TO?");
         int titleIndex = Math.max(0, titles.indexOf(getConfig().getString("menu.title", "&8&lRANDOM TELEPORT")));
         int size = getConfig().getInt("menu.size", 27);
-        boolean filler = getConfig().getBoolean("menu.filler", true);
         int closeSlot = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
         String iconStyle = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
         inventory.setItem(4, guiItem(Material.PAINTING, "&d&lPLAYER MENU APPEARANCE",
@@ -794,10 +790,10 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Switch between compact 27-slot and",
                 "&7large 54-slot layouts.",
                 "", "&d▶ Click to toggle"));
-        inventory.setItem(14, guiItem(filler ? Material.LIME_DYE : Material.GRAY_DYE,
-                "&f&lBACKGROUND FILLER: " + (filler ? "&aON" : "&cOFF"),
-                "&7Toggle the decorative background panes.",
-                "", "&d▶ Click to toggle"));
+        inventory.setItem(14, guiItem(Material.RECOVERY_COMPASS, "&e&lRESET MENU LAYOUT",
+                "&7Restore the clean default layout.",
+                "&7No glass panes are used.",
+                "", "&e▶ Reset layout"));
         inventory.setItem(16, guiItem(Material.ITEM_FRAME, "&f&lWORLD ICON STYLE",
                 "&7Current: &f" + iconStyle,
                 "&7Cycle the icons used for destinations.",
@@ -903,7 +899,7 @@ public final class RTP extends JavaPlugin implements Listener {
         int next = size == 27 ? PLAYER_MENU_NEXT_SLOT_27 : PLAYER_MENU_NEXT_SLOT_54;
         for (int i = 0; i < size; i++) {
             if (i == 4 || i == closeSlot || i == previous || i == next) continue;
-            inventory.setItem(i, guiItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE, "&fSlot " + i, "&7Place " + world.getName() + " here."));
+            inventory.setItem(i, guiItem(Material.PAPER, "&f&lSLOT " + i, "&7Place " + world.getName() + " here."));
         }
         inventory.setItem(4, guiItem(Material.COMPASS, "&b&lCHOOSE SLOT", "&7Reserved navigation slots cannot be selected."));
         player.openInventory(inventory);
@@ -1000,7 +996,12 @@ public final class RTP extends JavaPlugin implements Listener {
                 int close = getConfig().getInt("menu.close-slot", size == 27 ? 22 : 49);
                 if (close >= nextSize) getConfig().set("menu.close-slot", nextSize == 27 ? 22 : 49);
             }
-            case 14 -> getConfig().set("menu.filler", !getConfig().getBoolean("menu.filler", true));
+            case 14 -> {
+                getConfig().set("menu.size", 27);
+                getConfig().set("menu.filler", false);
+                getConfig().set("menu.icon-style", "DEFAULT");
+                getConfig().set("menu.close-slot", 22);
+            }
             case 16 -> {
                 List<String> styles = List.of("DEFAULT", "CLASSIC", "MINIMAL");
                 String current = getConfig().getString("menu.icon-style", "DEFAULT").toUpperCase(java.util.Locale.ROOT);
@@ -1491,22 +1492,6 @@ public final class RTP extends JavaPlugin implements Listener {
         }
         saveConfig();
         openWorldSettingsGui(player, world);
-    }
-
-    private void fillGui(Inventory inventory) {
-        ItemStack darkFiller = guiItem(Material.BLACK_STAINED_GLASS_PANE, "&0 ");
-        ItemStack accentFiller = guiItem(Material.GRAY_STAINED_GLASS_PANE, "&8 ");
-        ItemStack highlightFiller = guiItem(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "&b ");
-        int size = inventory.getSize();
-        int columns = 9;
-        for (int slot = 0; slot < size; slot++) {
-            int row = slot / columns;
-            int column = slot % columns;
-            boolean border = row == 0 || column == 0 || column == columns - 1 || slot >= size - columns;
-            ItemStack pane = !border ? darkFiller
-                    : ((row + column) % 2 == 0 ? accentFiller : darkFiller);
-            inventory.setItem(slot, pane);
-        }
     }
 
     private ItemStack guiItem(Material material, String name, String... loreLines) {
