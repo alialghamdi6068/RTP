@@ -84,10 +84,6 @@ public final class RTP extends JavaPlugin implements Listener {
                 getConfig().set("maximum-radius", 50000);
                 changed = true;
             }
-            if (getConfig().getInt("maximum-attempts", -1) == 30) {
-                getConfig().set("maximum-attempts", 200);
-                changed = true;
-            }
             if (!getConfig().getBoolean("load-chunks", true)) {
                 getConfig().set("load-chunks", true);
                 changed = true;
@@ -527,7 +523,6 @@ public final class RTP extends JavaPlugin implements Listener {
         int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000)));
         int maxRadius = Math.max(minRadius + 1, Math.min(30_000_000,
                 worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50_000))));
-        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 200))));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
@@ -561,102 +556,49 @@ public final class RTP extends JavaPlugin implements Listener {
             return;
         }
 
-        int[] candidates = new int[attempts * 2];
-        for (int i = 0; i < attempts; i++) {
-            if (customArea) {
-                candidates[i * 2] = (int) random.nextLong((long) minX, (long) maxX + 1L);
-                candidates[i * 2 + 1] = (int) random.nextLong((long) minZ, (long) maxZ + 1L);
-            } else {
-                double angle = random.nextDouble() * Math.PI * 2.0;
-                // Square-root sampling distributes destinations more evenly across the ring's area.
-                double minSquared = (double) minRadius * minRadius;
-                double maxSquared = (double) maxRadius * maxRadius;
-                double distance = Math.sqrt(minSquared + random.nextDouble() * (maxSquared - minSquared));
-                candidates[i * 2] = centerX + (int) Math.round(Math.cos(angle) * distance);
-                candidates[i * 2 + 1] = centerZ + (int) Math.round(Math.sin(angle) * distance);
-            }
-        }
-
-        // Fast path: test already-loaded chunks first. This avoids waiting for chunk generation
-        // when the world already has safe destinations inside the configured RTP area.
-        int[] randomFallbackCandidates = candidates.clone();
-        int loadedCandidateCount = prioritizeLoadedCandidates(world, candidates, attempts,
-                minRadius, maxRadius, centerX, centerZ, customArea, minX, maxX, minZ, maxZ);
-        for (int i = loadedCandidateCount; i < attempts; i++) {
-            candidates[i * 2] = randomFallbackCandidates[(i - loadedCandidateCount) * 2];
-            candidates[i * 2 + 1] = randomFallbackCandidates[(i - loadedCandidateCount) * 2 + 1];
-        }
-        searchCandidate(player, world, candidates, attempts, 0, searchToken);
+        searchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                customArea, minX, maxX, minZ, maxZ);
     }
 
-    private int prioritizeLoadedCandidates(World world, int[] candidates, int attempts,
-                                           int minRadius, int maxRadius, int centerX, int centerZ,
-                                           boolean customArea, int minX, int maxX, int minZ, int maxZ) {
-        org.bukkit.Chunk[] loadedChunks = world.getLoadedChunks();
-        if (loadedChunks.length == 0) return 0;
-
-        List<org.bukkit.Chunk> shuffledChunks = new ArrayList<>(java.util.Arrays.asList(loadedChunks));
-        java.util.Collections.shuffle(shuffledChunks, random);
-        long minDistanceSquared = (long) minRadius * minRadius;
-        long maxDistanceSquared = (long) maxRadius * maxRadius;
-        int count = 0;
-
-        for (org.bukkit.Chunk chunk : shuffledChunks) {
-            if (count >= attempts) break;
-            int baseX = chunk.getX() << 4;
-            int baseZ = chunk.getZ() << 4;
-
-            // Sample a few positions in each loaded chunk so edge chunks can still contribute.
-            for (int sample = 0; sample < 4 && count < attempts; sample++) {
-                int x = baseX + random.nextInt(16);
-                int z = baseZ + random.nextInt(16);
-                if (customArea) {
-                    if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
-                } else {
-                    long dx = (long) x - centerX;
-                    long dz = (long) z - centerZ;
-                    long distanceSquared = dx * dx + dz * dz;
-                    if (distanceSquared < minDistanceSquared || distanceSquared > maxDistanceSquared) continue;
-                }
-                if (!world.getWorldBorder().isInside(new Location(world, x + 0.5, world.getMinHeight(), z + 0.5))) continue;
-                candidates[count * 2] = x;
-                candidates[count * 2 + 1] = z;
-                count++;
-                break;
-            }
-        }
-        return count;
+    private void retrySearchCandidate(Player player, World world, UUID searchToken,
+                                      int minRadius, int maxRadius, int centerX, int centerZ,
+                                      boolean customArea, int minX, int maxX, int minZ, int maxZ) {
+        Bukkit.getScheduler().runTask(this, () -> searchCandidate(player, world, searchToken,
+                minRadius, maxRadius, centerX, centerZ, customArea, minX, maxX, minZ, maxZ));
     }
 
-    private void searchCandidate(Player player, World world, int[] candidates, int attempts, int index, UUID searchToken) {
+    private void searchCandidate(Player player, World world, UUID searchToken,
+                                  int minRadius, int maxRadius, int centerX, int centerZ,
+                                  boolean customArea, int minX, int maxX, int minZ, int maxZ) {
         UUID playerId = player.getUniqueId();
-        if (!player.isOnline()) {
-            finishSearch(playerId, searchToken);
-            return;
-        }
+        if (!player.isOnline()) { finishSearch(playerId, searchToken); return; }
         if (!isActiveSearch(playerId, searchToken)) return;
-        if (index >= attempts) {
-            finishSearch(player.getUniqueId(), searchToken);
-            sendRtpMessage(player, "failed");
-            return;
+
+        int x, z;
+        if (customArea) {
+            x = (int) random.nextLong((long) minX, (long) maxX + 1L);
+            z = (int) random.nextLong((long) minZ, (long) maxZ + 1L);
+        } else {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double minSquared = (double) minRadius * minRadius;
+            double maxSquared = (double) maxRadius * maxRadius;
+            double distance = Math.sqrt(minSquared + random.nextDouble() * (maxSquared - minSquared));
+            x = centerX + (int) Math.round(Math.cos(angle) * distance);
+            z = centerZ + (int) Math.round(Math.sin(angle) * distance);
         }
 
-        int x = candidates[index * 2];
-        int z = candidates[index * 2 + 1];
-        Location borderCheck = new Location(world, x + 0.5, world.getMinHeight(), z + 0.5);
-        if (!world.getWorldBorder().isInside(borderCheck)) {
-            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+        if (!world.getWorldBorder().isInside(new Location(world, x + 0.5, world.getMinHeight(), z + 0.5))) {
+            retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                    customArea, minX, maxX, minZ, maxZ);
             return;
         }
-
-        int chunkX = x >> 4;
-        int chunkZ = z >> 4;
+        int chunkX = x >> 4, chunkZ = z >> 4;
         if (!world.isChunkLoaded(chunkX, chunkZ)) {
-            if (!getConfig().getBoolean("load-chunks", false)) {
-                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+            if (!getConfig().getBoolean("load-chunks", true)) {
+                retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                        customArea, minX, maxX, minZ, maxZ);
                 return;
             }
-            // Paper async chunk loading avoids synchronously generating chunks on the main server thread.
             world.getChunkAtAsync(chunkX, chunkZ, true).whenComplete((chunk, error) ->
                     runOnMainIfEnabled(() -> {
                         if (!isActiveSearch(player.getUniqueId(), searchToken)) return;
@@ -665,92 +607,72 @@ public final class RTP extends JavaPlugin implements Listener {
                                     ? error.getCause() : error;
                             getLogger().fine("Could not load RTP chunk " + chunkX + "," + chunkZ + " in "
                                     + world.getName() + ": " + cause.getMessage());
-                            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+                            retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                                    customArea, minX, maxX, minZ, maxZ);
                             return;
                         }
-                        evaluateCandidate(player, world, x, z, candidates, attempts, index, searchToken);
+                        evaluateCandidate(player, world, x, z, searchToken, minRadius, maxRadius,
+                                centerX, centerZ, customArea, minX, maxX, minZ, maxZ);
                     }));
             return;
         }
-        evaluateCandidate(player, world, x, z, candidates, attempts, index, searchToken);
+        evaluateCandidate(player, world, x, z, searchToken, minRadius, maxRadius,
+                centerX, centerZ, customArea, minX, maxX, minZ, maxZ);
     }
 
-    private void evaluateCandidate(Player player, World world, int x, int z,
-                                   int[] candidates, int attempts, int index, UUID searchToken) {
+    private void evaluateCandidate(Player player, World world, int x, int z, UUID searchToken,
+                                   int minRadius, int maxRadius, int centerX, int centerZ,
+                                   boolean customArea, int minX, int maxX, int minZ, int maxZ) {
         UUID playerId = player.getUniqueId();
-        if (!player.isOnline()) {
-            finishSearch(playerId, searchToken);
-            return;
-        }
+        if (!player.isOnline()) { finishSearch(playerId, searchToken); return; }
         if (!isActiveSearch(playerId, searchToken)) return;
         try {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+                retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                        customArea, minX, maxX, minZ, maxZ);
                 return;
             }
-
             Location playerLocation = player.getLocation();
             Location destination = null;
             int minimumY = Math.max(world.getMinHeight(), worldInt(world, "minimum-y", world.getMinHeight()));
             int maximumY = Math.min(world.getMaxHeight() - 2, worldInt(world, "maximum-y", world.getMaxHeight() - 2));
-            boolean avoidWater = getConfig().getBoolean("avoid-water", true);
-
-            // Search the selected column first, then nearby columns in the same loaded chunk.
-            // This helps when the random coordinate lands in a crater, a narrow hole, or damaged terrain.
             for (int radius = 0; radius <= 7 && destination == null; radius++) {
                 for (int dx = -radius; dx <= radius && destination == null; dx++) {
                     for (int dz = -radius; dz <= radius && destination == null; dz++) {
                         if (radius > 0 && Math.abs(dx) != radius && Math.abs(dz) != radius) continue;
-                        int candidateX = x + dx;
-                        int candidateZ = z + dz;
+                        int candidateX = x + dx, candidateZ = z + dz;
                         if ((candidateX >> 4) != (x >> 4) || (candidateZ >> 4) != (z >> 4)) continue;
-
-                        Location borderCheck = new Location(world, candidateX + 0.5, world.getMinHeight(), candidateZ + 0.5);
-                        if (!world.getWorldBorder().isInside(borderCheck)) continue;
-
+                        if (!world.getWorldBorder().isInside(new Location(world, candidateX + 0.5,
+                                world.getMinHeight(), candidateZ + 0.5))) continue;
                         Block ground = world.getHighestBlockAt(candidateX, candidateZ);
                         int groundY = ground.getY();
                         if (groundY < minimumY || groundY > maximumY || groundY + 2 >= world.getMaxHeight()) continue;
-
                         Material groundType = ground.getType();
-                        Block feet = ground.getRelative(0, 1, 0);
-                        Block head = ground.getRelative(0, 2, 0);
-                        // Minimal practical landing checks: solid surface, enough room for the player,
-                        // and never place the player in lava or water. Do not reject other terrain hazards.
-                        if (!groundType.isSolid()
-                                || !feet.isPassable() || !head.isPassable()
-                                || groundType == Material.LAVA
-                                || feet.getType() == Material.LAVA || head.getType() == Material.LAVA
-                                || groundType == Material.WATER
-                                || feet.getType() == Material.WATER || head.getType() == Material.WATER
-                                || groundType == Material.BUBBLE_COLUMN
-                                || feet.getType() == Material.BUBBLE_COLUMN || head.getType() == Material.BUBBLE_COLUMN
-                                || feet.isLiquid() || head.isLiquid()) continue;
-
+                        Block feet = ground.getRelative(0, 1, 0), head = ground.getRelative(0, 2, 0);
+                        if (!groundType.isSolid() || !feet.isPassable() || !head.isPassable()
+                                || groundType == Material.LAVA || feet.getType() == Material.LAVA || head.getType() == Material.LAVA
+                                || groundType == Material.WATER || feet.getType() == Material.WATER || head.getType() == Material.WATER
+                                || groundType == Material.BUBBLE_COLUMN || feet.getType() == Material.BUBBLE_COLUMN
+                                || head.getType() == Material.BUBBLE_COLUMN || feet.isLiquid() || head.isLiquid()) continue;
                         destination = new Location(world, candidateX + 0.5, groundY + 1.0, candidateZ + 0.5,
                                 playerLocation.getYaw(), playerLocation.getPitch());
                     }
                 }
             }
-
             if (destination == null) {
-                searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+                retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                        customArea, minX, maxX, minZ, maxZ);
                 return;
             }
-
             Location safeDestination = destination;
             player.teleportAsync(safeDestination).whenComplete((success, error) ->
                     runOnMainIfEnabled(() -> {
                         if (!finishSearch(player.getUniqueId(), searchToken) || !player.isOnline()) return;
                         if (error != null) {
                             getLogger().warning("RTP teleport failed for " + player.getName() + ": " + error.getMessage());
-                            sendRtpMessage(player, "failed");
-                            return;
+                            sendRtpMessage(player, "failed"); return;
                         }
-                        if (!Boolean.TRUE.equals(success)) {
-                            sendRtpMessage(player, "failed");
-                            return;
-                        }
+                        if (!Boolean.TRUE.equals(success)) { sendRtpMessage(player, "failed"); return; }
                         if (!player.hasPermission("rtp.bypasscooldown")) {
                             cooldowns.put(playerId, System.currentTimeMillis());
                             saveCooldowns();
@@ -759,7 +681,8 @@ public final class RTP extends JavaPlugin implements Listener {
                     }));
         } catch (RuntimeException exception) {
             getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
-            searchCandidate(player, world, candidates, attempts, index + 1, searchToken);
+            retrySearchCandidate(player, world, searchToken, minRadius, maxRadius, centerX, centerZ,
+                    customArea, minX, maxX, minZ, maxZ);
         }
     }
 
@@ -1173,18 +1096,6 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Increase the wait between RTP uses.",
                 "&a+5 seconds per click"));
 
-        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFEWER ATTEMPTS",
-                "&7Try fewer candidate locations per request.",
-                "&c−5 attempts per click"));
-        inventory.setItem(30, guiItem(Material.PAPER, "&f&lMAXIMUM ATTEMPTS",
-                "&8&m--------------------",
-                "&7Current value: &f" + getConfig().getInt("maximum-attempts", 30),
-                "&7Allowed range: &f1–200 attempts",
-                "&8Maximum candidate locations per request."));
-        inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMORE ATTEMPTS",
-                "&7Try more candidate locations per request.",
-                "&a+5 attempts per click"));
-
         inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFEWER SEARCHES",
                 "&7Lower the number of searches allowed at once.",
                 "&c−5 searches per click"));
@@ -1243,8 +1154,6 @@ public final class RTP extends JavaPlugin implements Listener {
             case 14 -> { path = "countdown-seconds"; delta = 1; }
             case 19 -> { path = "cooldown-seconds"; delta = -5; }
             case 23 -> { path = "cooldown-seconds"; delta = 5; }
-            case 28 -> { path = "maximum-attempts"; delta = -5; }
-            case 32 -> { path = "maximum-attempts"; delta = 5; }
             case 37 -> { path = "maximum-active-searches"; delta = -5; }
             case 41 -> { path = "maximum-active-searches"; delta = 5; }
             case 46 -> { path = "search-timeout-seconds"; delta = -5; }
@@ -1269,14 +1178,13 @@ public final class RTP extends JavaPlugin implements Listener {
         int min = switch (path) {
             case "countdown-seconds" -> 0;
             case "cooldown-seconds" -> 0;
-            case "maximum-attempts", "maximum-active-searches" -> 1;
+            case "maximum-active-searches" -> 1;
             case "search-timeout-seconds" -> 5;
             default -> 0;
         };
         int max = switch (path) {
             case "countdown-seconds" -> 60;
             case "cooldown-seconds" -> 86400;
-            case "maximum-attempts" -> 200;
             case "maximum-active-searches" -> 500;
             case "search-timeout-seconds" -> 120;
             default -> 0;
@@ -1382,7 +1290,6 @@ public final class RTP extends JavaPlugin implements Listener {
         int maxY = worldInt(world, "maximum-y", world.getMaxHeight() - 2);
         int countdown = worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
         long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
-        int attempts = worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
         boolean enabled = isWorldRtpEnabled(world)
                 && !getConfig().getStringList("disabled-worlds").contains(world.getName());
         inventory.setItem(4, guiItem(Material.COMPARATOR, "&6&lWORLD SETTINGS",
@@ -1410,9 +1317,6 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(32, guiItem(Material.RED_DYE, "&c&lMAX Y -10", "&7Current: &f" + maxY));
         inventory.setItem(33, guiItem(Material.IRON_PICKAXE, "&f&lMAXIMUM Y", "&7Current: &f" + maxY, "&7World ceiling: " + (world.getMaxHeight() - 2)));
         inventory.setItem(34, guiItem(Material.LIME_DYE, "&a&lMAX Y +10", "&7Increase maximum accepted height."));
-        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lATTEMPTS -5", "&7Current: &f" + attempts));
-        inventory.setItem(38, guiItem(Material.PAPER, "&f&lMAXIMUM ATTEMPTS", "&7Current: &f" + attempts, "&7Range: 1–200."));
-        inventory.setItem(39, guiItem(Material.LIME_DYE, "&a&lATTEMPTS +5", "&7Increase search attempts."));
         int timeout = worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20));
         inventory.setItem(42, guiItem(Material.RED_DYE, "&c&lSEARCH TIMEOUT -5", "&7Current: &f" + timeout + "s"));
         inventory.setItem(43, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
@@ -1526,8 +1430,6 @@ public final class RTP extends JavaPlugin implements Listener {
             case 30 -> getConfig().set(base + "minimum-y", Math.min(maxY, minY + 10));
             case 32 -> getConfig().set(base + "maximum-y", Math.max(minY, maxY - 10));
             case 34 -> getConfig().set(base + "maximum-y", Math.min(world.getMaxHeight() - 2, maxY + 10));
-            case 37 -> getConfig().set(base + "maximum-attempts", Math.max(1, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) - 5));
-            case 39 -> getConfig().set(base + "maximum-attempts", Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30)) + 5));
             case 41 -> {
                 boolean currentlyEnabled = isWorldRtpEnabled(world)
                         && !getConfig().getStringList("disabled-worlds").contains(world.getName());
@@ -1905,12 +1807,6 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("cooldown-seconds", 30);
         }
 
-        int attempts = getConfig().getInt("maximum-attempts", 200);
-        if (attempts < 1 || attempts > 200) {
-            getLogger().warning("maximum-attempts must be between 1 and 200; using 200.");
-            getConfig().set("maximum-attempts", 200);
-        }
-
         int minRadius = getConfig().getInt("minimum-radius", 1000);
         int maxRadius = getConfig().getInt("maximum-radius", 50000);
         // Migrate the previous bundled defaults while preserving deliberate custom values.
@@ -1926,7 +1822,6 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("maximum-radius", 50000);
         }
         if (getConfig().getInt("countdown-seconds", 5) == 5) getConfig().set("countdown-seconds", 0);
-        if (getConfig().getInt("maximum-attempts", 30) == 30) getConfig().set("maximum-attempts", 200);
         if (!getConfig().getBoolean("load-chunks", true)) getConfig().set("load-chunks", true);
 
         int maxSearches = getConfig().getInt("maximum-active-searches", 25);
@@ -1972,12 +1867,6 @@ public final class RTP extends JavaPlugin implements Listener {
                 if (worldCooldown < 0 || worldCooldown > 86400) {
                     getLogger().warning("Invalid cooldown-seconds for world '" + worldName + "'; using global value.");
                     getConfig().set(base + "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
-                }
-                int worldAttempts = getConfig().getInt(base + "maximum-attempts",
-                        getConfig().getInt("maximum-attempts", 30));
-                if (worldAttempts < 1 || worldAttempts > 200) {
-                    getLogger().warning("Invalid maximum-attempts for world '" + worldName + "'; using global value.");
-                    getConfig().set(base + "maximum-attempts", getConfig().getInt("maximum-attempts", 30));
                 }
                 int worldTimeout = getConfig().getInt(base + "search-timeout-seconds",
                         getConfig().getInt("search-timeout-seconds", 20));
