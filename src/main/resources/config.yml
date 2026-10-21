@@ -26,7 +26,7 @@ admin-menu:
 menu:
   title: "&8&lRANDOM TELEPORT"
   size: 27
-  filler: true
+  filler: false
   # نمط أيقونات العوالم: DEFAULT أو CLASSIC أو MINIMAL.
   icon-style: DEFAULT
   close-slot: 22
