@@ -41,8 +41,8 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, BukkitTask> searchTimeouts = new HashMap<>();
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
-    private final java.util.Set<UUID> pendingTitleEdits = new java.util.HashSet<>();
-    private final java.util.Set<UUID> pendingAdminTitleEdits = new java.util.HashSet<>();
+    private final java.util.Set<UUID> pendingTitleEdits = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<UUID> pendingAdminTitleEdits = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final Map<UUID, String> pendingMessageEdits = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, Integer> messageEditorPages = new HashMap<>();
     private File cooldownFile;
