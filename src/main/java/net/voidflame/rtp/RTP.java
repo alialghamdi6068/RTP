@@ -42,7 +42,7 @@ public final class RTP extends JavaPlugin implements Listener {
     private final Map<UUID, UUID> searchTokens = new HashMap<>();
     private final Random random = new Random();
     private final java.util.Set<UUID> pendingTitleEdits = new java.util.HashSet<>();
-    private final Map<UUID, String> pendingMessageEdits = new HashMap<>();
+    private final Map<UUID, String> pendingMessageEdits = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, Integer> messageEditorPages = new HashMap<>();
     private File cooldownFile;
     private YamlConfiguration cooldownData;
