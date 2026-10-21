@@ -1,5 +1,5 @@
-# VoidFlame RTP — Donut-inspired world selector and safe random teleport.
-# Run /rtp reload after changing this file.
+# إعدادات النقل العشوائي
+# استخدم /rtp reload لتطبيق التعديلات دون إعادة تشغيل السيرفر.
 
 world: ""
 allowed-worlds: []
@@ -16,11 +16,10 @@ search-timeout-seconds: 20
 load-chunks: true
 avoid-water: true
 
-# Player menu defaults: standard dimensions appear first, followed by other eligible loaded worlds.
-# Supported sizes are 27 or 54 only; other values reset to 27 to preserve pagination slots.
-# The player selector automatically paginates when more worlds are available than fit on one page.
+# إعدادات قائمة اختيار العالم
+# الأحجام المدعومة هي 27 أو 54 خانة، وتُستخدم الصفحات تلقائيًا عند الحاجة.
 menu:
-  title: "&8&lRTP"
+  title: "&8&lRandom Teleport"
   size: 27
   filler: true
   close-slot: 22
@@ -29,9 +28,9 @@ menu:
     world_nether: 13
     world_the_end: 15
 
-# Optional per-world overrides. Omitted values inherit the global settings.
-# Set enabled: false to hide a world from the player menu and block direct RTP.
-# minimum-y / maximum-y constrain the surface Y coordinate accepted for teleport.
+# إعدادات مخصصة لكل عالم؛ أي قيمة غير محددة تستخدم الإعداد العام.
+# استخدم enabled: false لإخفاء العالم من القائمة ومنع النقل إليه.
+# تحدد minimum-y و maximum-y نطاق الارتفاع المسموح به.
 # world-settings:
 #   world:
 #     enabled: true
@@ -44,7 +43,7 @@ menu:
 #     maximum-attempts: 200
 #     search-timeout-seconds: 20
 #
-# Optional per-world area override; values are X/Z block coordinates.
+# نطاق اختياري لكل عالم، وتُحدد الإحداثيات بوحدات البلوكات على محوري X و Z.
 # world-areas:
 #   world:
 #     min-x: -3000
@@ -52,27 +51,28 @@ menu:
 #     min-z: -3000
 #     max-z: 3000
 
+# رسائل اللاعب؛ تدعم رموز الألوان باستخدام & والمتغيرات الموضحة في الرسائل.
 messages:
-  prefix: "&8[&5&lRTP&8] &r"
-  no-permission: "&cYou don't have permission to use this command."
-  usage: "&7Usage: &f/rtp &8[&fworld&8|&fgui&8|&fworlds&8|&freload&8]"
-  players-only: "&cThis command can only be used by a player."
-  admin-gui-players-only: "&cThe admin menu can only be opened in-game."
-  cooldown: "&7Please wait &e&l%time%s &7before using RTP again."
-  already-counting: "&eYour RTP request is already running. Please wait."
-  world-not-found: "&cThat destination world is not loaded or does not exist."
-  world-not-allowed: "&cYou cannot start RTP from this world."
-  world-disabled: "&cRTP is disabled in this world."
-  destination-world-disabled: "&cRTP is disabled in the destination world."
-  invalid-area: "&cThe RTP area for this world has invalid coordinates."
-  countdown-start: "&7Random teleport starts in &d&l%time%s&7. &eDon't move!"
-  countdown-tick: "&7Teleporting in &d&l%time%&7..."
-  countdown-cancelled: "&cTeleport cancelled because you moved."
-  searching: "&7Searching for a safe location&8..."
-  success: "&aTeleport successful! &7Location: &f%x%&8, &f%y%&8, &f%z% &7in &d%world%&7."
-  failed: "&cCouldn't find a safe location. Please try again."
-  busy: "&eRTP is busy right now. Please try again in a moment."
-  timeout: "&cRTP search took too long. Please try again."
-  world-enabled: "&aRTP enabled for world &f%world%&a."
-  world-disabled-admin: "&cRTP disabled for world &f%world%&c."
-  reloaded: "&aConfiguration reloaded successfully."
+  prefix: "&8[&5VoidFlame &dRTP&8] &r"
+  no-permission: "&cError: &7You do not have permission to use this command."
+  usage: "&7Usage: &f/rtp &8[&fworld&8 | &fgui&8 | &fworlds&8 | &freload&8]"
+  players-only: "&cError: &7This command can only be used by a player."
+  admin-gui-players-only: "&cError: &7The administration menu can only be opened in-game."
+  cooldown: "&eCooldown: &7You can use RTP again in &f%time%s&7."
+  already-counting: "&eNotice: &7Your teleport request is already in progress."
+  world-not-found: "&cError: &7The selected world is unavailable or has not been loaded."
+  world-not-allowed: "&cError: &7RTP cannot be started from your current world."
+  world-disabled: "&cUnavailable: &7RTP is disabled in your current world."
+  destination-world-disabled: "&cUnavailable: &7RTP is disabled in the selected destination world."
+  invalid-area: "&cConfiguration Error: &7The RTP area for this world is invalid. Please contact an administrator."
+  countdown-start: "&7Teleporting in &d%time%s&7. &eRemain still to continue."
+  countdown-tick: "&7Teleporting in &d%time%&7..."
+  countdown-cancelled: "&cCancelled: &7Teleportation was cancelled because you moved."
+  searching: "&7Finding a safe destination..."
+  success: "&aSuccess: &7Teleported to &f%x%, %y%, %z% &7in &d%world%&7."
+  failed: "&cFailed: &7No safe destination was found. Please try again."
+  busy: "&eNotice: &7RTP is currently busy. Please try again shortly."
+  timeout: "&cTimeout: &7The search took too long. Please try again."
+  world-enabled: "&aUpdated: &7RTP has been enabled for world &f%world%&7."
+  world-disabled-admin: "&eUpdated: &7RTP has been disabled for world &f%world%&7."
+  reloaded: "&aSuccess: &7Configuration reloaded successfully."
