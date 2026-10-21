@@ -1070,16 +1070,34 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void handleWorldAreaClick(Player player, World world, int slot) {
         String base = "world-areas." + world.getName() + ".";
+        int x = player.getLocation().getBlockX();
+        int z = player.getLocation().getBlockZ();
         switch (slot) {
-            case 10 -> getConfig().set(base + "min-x", player.getLocation().getBlockX());
-            case 12 -> getConfig().set(base + "max-x", player.getLocation().getBlockX());
-            case 14 -> getConfig().set(base + "min-z", player.getLocation().getBlockZ());
-            case 16 -> getConfig().set(base + "max-z", player.getLocation().getBlockZ());
+            case 10 -> {
+                getConfig().set(base + "min-x", x);
+                if (getConfig().contains(base + "max-x") && x > getConfig().getInt(base + "max-x")) {
+                    getConfig().set(base + "max-x", x);
+                }
+            }
+            case 12 -> {
+                getConfig().set(base + "max-x", x);
+                if (getConfig().contains(base + "min-x") && x < getConfig().getInt(base + "min-x")) {
+                    getConfig().set(base + "min-x", x);
+                }
+            }
+            case 14 -> {
+                getConfig().set(base + "min-z", z);
+                if (getConfig().contains(base + "max-z") && z > getConfig().getInt(base + "max-z")) {
+                    getConfig().set(base + "max-z", z);
+                }
+            }
+            case 16 -> {
+                getConfig().set(base + "max-z", z);
+                if (getConfig().contains(base + "min-z") && z < getConfig().getInt(base + "min-z")) {
+                    getConfig().set(base + "min-z", z);
+                }
+            }
             case 31 -> {
-                getConfig().set(base + "min-x", null);
-                getConfig().set(base + "max-x", null);
-                getConfig().set(base + "min-z", null);
-                getConfig().set(base + "max-z", null);
                 getConfig().set("world-areas." + world.getName(), null);
             }
             case 45 -> { openWorldSettingsGui(player, world); return; }
@@ -1101,7 +1119,7 @@ public final class RTP extends JavaPlugin implements Listener {
             case 12 -> getConfig().set(base + "minimum-radius", Math.max(0, Math.min(maxRadius - 1, minRadius + 100)));
             case 14 -> getConfig().set(base + "maximum-radius", Math.max(minRadius + 1, maxRadius - 500));
             case 16 -> getConfig().set(base + "maximum-radius", Math.min(30_000_000, maxRadius + 500));
-            case 19 -> getConfig().set(base + "countdown-seconds", Math.max(1, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) - 1));
+            case 19 -> getConfig().set(base + "countdown-seconds", Math.max(0, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 0)) - 1));
             case 21 -> getConfig().set(base + "countdown-seconds", Math.min(60, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + 1));
             case 23 -> getConfig().set(base + "cooldown-seconds", Math.max(0, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) - 5));
             case 25 -> getConfig().set(base + "cooldown-seconds", Math.min(86400, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) + 5));
