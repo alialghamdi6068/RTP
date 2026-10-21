@@ -827,7 +827,7 @@ public final class RTP extends JavaPlugin implements Listener {
             case "world" -> 11;
             case "world_nether" -> 13;
             case "world_the_end" -> 15;
-            default -> 20;
+            default -> -1;
         };
     }
 
@@ -865,7 +865,8 @@ public final class RTP extends JavaPlugin implements Listener {
             if (index >= worlds.size()) break;
             World world = worlds.get(index);
             int current = getConfig().getInt("menu.world-slots." + world.getName(), defaultSlotForWorld(world));
-            inventory.setItem(i, guiItem(Material.PAPER, "&f&l" + world.getName(), "&7Current slot: &f" + current, "", "&b▶ Click to arrange"));
+            inventory.setItem(i, guiItem(Material.PAPER, "&f&l" + world.getName(),
+                    "&7Current slot: &f" + (current < 0 ? "Automatic" : current), "", "&b▶ Click to arrange"));
         }
         inventory.setItem(45, guiItem(Material.ARROW, "&e&lPREVIOUS PAGE"));
         inventory.setItem(49, guiItem(Material.OAK_DOOR, "&6&lBACK"));
