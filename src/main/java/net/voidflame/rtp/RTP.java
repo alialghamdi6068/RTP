@@ -1096,27 +1096,27 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&7Increase the wait between RTP uses.",
                 "&a+5 seconds per click"));
 
-        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lFEWER SEARCHES",
+        inventory.setItem(28, guiItem(Material.RED_DYE, "&c&lFEWER SEARCHES",
                 "&7Lower the number of searches allowed at once.",
                 "&c−5 searches per click"));
-        inventory.setItem(39, guiItem(Material.BOOK, "&f&lCONCURRENT SEARCHES",
+        inventory.setItem(30, guiItem(Material.BOOK, "&f&lCONCURRENT SEARCHES",
                 "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("maximum-active-searches", 25),
                 "&7Allowed range: &f1–500 searches",
                 "&8Limits simultaneous RTP searches."));
-        inventory.setItem(41, guiItem(Material.LIME_DYE, "&a&lMORE SEARCHES",
+        inventory.setItem(32, guiItem(Material.LIME_DYE, "&a&lMORE SEARCHES",
                 "&7Allow more searches to run at once.",
                 "&a+5 searches per click"));
 
-        inventory.setItem(46, guiItem(Material.RED_DYE, "&c&lSHORTER TIMEOUT",
+        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lSHORTER TIMEOUT",
                 "&7Stop stalled searches sooner.",
                 "&c−5 seconds per click"));
-        inventory.setItem(48, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT",
+        inventory.setItem(39, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT",
                 "&8&m--------------------",
                 "&7Current value: &f" + getConfig().getInt("search-timeout-seconds", 20) + " seconds",
                 "&7Allowed range: &f5–120 seconds",
                 "&8Maximum time allowed for a search."));
-        inventory.setItem(50, guiItem(Material.LIME_DYE, "&a&lLONGER TIMEOUT",
+        inventory.setItem(41, guiItem(Material.LIME_DYE, "&a&lLONGER TIMEOUT",
                 "&7Allow searches more time to finish.",
                 "&a+5 seconds per click"));
         inventory.setItem(43, guiItem(getConfig().getBoolean("load-chunks", false) ? Material.LIME_DYE : Material.GRAY_DYE,
@@ -1154,10 +1154,10 @@ public final class RTP extends JavaPlugin implements Listener {
             case 14 -> { path = "countdown-seconds"; delta = 1; }
             case 19 -> { path = "cooldown-seconds"; delta = -5; }
             case 23 -> { path = "cooldown-seconds"; delta = 5; }
-            case 37 -> { path = "maximum-active-searches"; delta = -5; }
-            case 41 -> { path = "maximum-active-searches"; delta = 5; }
-            case 46 -> { path = "search-timeout-seconds"; delta = -5; }
-            case 50 -> { path = "search-timeout-seconds"; delta = 5; }
+            case 28 -> { path = "maximum-active-searches"; delta = -5; }
+            case 32 -> { path = "maximum-active-searches"; delta = 5; }
+            case 37 -> { path = "search-timeout-seconds"; delta = -5; }
+            case 41 -> { path = "search-timeout-seconds"; delta = 5; }
             default -> { return; }
         }
         int value = getConfig().getInt(path);
@@ -1318,9 +1318,9 @@ public final class RTP extends JavaPlugin implements Listener {
         inventory.setItem(33, guiItem(Material.IRON_PICKAXE, "&f&lMAXIMUM Y", "&7Current: &f" + maxY, "&7World ceiling: " + (world.getMaxHeight() - 2)));
         inventory.setItem(34, guiItem(Material.LIME_DYE, "&a&lMAX Y +10", "&7Increase maximum accepted height."));
         int timeout = worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20));
-        inventory.setItem(42, guiItem(Material.RED_DYE, "&c&lSEARCH TIMEOUT -5", "&7Current: &f" + timeout + "s"));
-        inventory.setItem(43, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
-        inventory.setItem(44, guiItem(Material.LIME_DYE, "&a&lSEARCH TIMEOUT +5", "&7Increase search timeout."));
+        inventory.setItem(37, guiItem(Material.RED_DYE, "&c&lSEARCH TIMEOUT -5", "&7Current: &f" + timeout + "s"));
+        inventory.setItem(38, guiItem(Material.CLOCK, "&f&lSEARCH TIMEOUT", "&7Current: &f" + timeout + "s", "&7Range: 5–120 seconds."));
+        inventory.setItem(39, guiItem(Material.LIME_DYE, "&a&lSEARCH TIMEOUT +5", "&7Increase search timeout."));
         inventory.setItem(41, guiItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
                 enabled ? "&a&lWORLD RTP: ENABLED" : "&c&lWORLD RTP: DISABLED",
                 "&7Toggle whether this world is available in /rtp.",
@@ -1442,9 +1442,9 @@ public final class RTP extends JavaPlugin implements Listener {
                 }
                 getConfig().set("disabled-worlds", disabledWorlds);
             }
-            case 42 -> getConfig().set(base + "search-timeout-seconds",
+            case 37 -> getConfig().set(base + "search-timeout-seconds",
                     Math.max(5, worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20)) - 5));
-            case 44 -> getConfig().set(base + "search-timeout-seconds",
+            case 39 -> getConfig().set(base + "search-timeout-seconds",
                     Math.min(120, worldInt(world, "search-timeout-seconds", getConfig().getInt("search-timeout-seconds", 20)) + 5));
             default -> { return; }
         }
