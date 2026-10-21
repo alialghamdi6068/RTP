@@ -8,10 +8,10 @@ disabled-worlds: []
 world-settings: {}
 world-areas: {}
 minimum-radius: 1000
-maximum-radius: 15000
+maximum-radius: 50000
 countdown-seconds: 0
 cooldown-seconds: 30
-maximum-attempts: 100
+maximum-attempts: 200
 maximum-active-searches: 25
 search-timeout-seconds: 20
 load-chunks: true
