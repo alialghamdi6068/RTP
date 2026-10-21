@@ -6,8 +6,8 @@ description: Configurable random teleport plugin for Paper 26.2.
 author: VoidFlame
 commands:
   rtp:
-    description: Open the random teleport menu or teleport to a world.
-    usage: /rtp [world|gui|worlds|reload]
+    description: Open the RTP dimension selector or teleport directly to a selected world.
+    usage: /rtp [overworld|nether|end|world|gui|worlds|reload]
     aliases: [randomtp]
   adminrtp:
     description: Open the RTP administration menu.
