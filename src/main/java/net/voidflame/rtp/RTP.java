@@ -715,10 +715,17 @@ public final class RTP extends JavaPlugin implements Listener {
                         Material groundType = ground.getType();
                         Block feet = ground.getRelative(0, 1, 0);
                         Block head = ground.getRelative(0, 2, 0);
-                        if (!groundType.isSolid() || isUnsafe(groundType)
+                        // Minimal practical landing checks: solid surface, enough room for the player,
+                        // and never place the player in lava or water. Do not reject other terrain hazards.
+                        if (!groundType.isSolid()
                                 || !feet.isPassable() || !head.isPassable()
-                                || isUnsafe(feet.getType()) || isUnsafe(head.getType())
-                                || (avoidWater && (feet.isLiquid() || head.isLiquid()))) continue;
+                                || groundType == Material.LAVA
+                                || feet.getType() == Material.LAVA || head.getType() == Material.LAVA
+                                || groundType == Material.WATER
+                                || feet.getType() == Material.WATER || head.getType() == Material.WATER
+                                || groundType == Material.BUBBLE_COLUMN
+                                || feet.getType() == Material.BUBBLE_COLUMN || head.getType() == Material.BUBBLE_COLUMN
+                                || feet.isLiquid() || head.isLiquid()) continue;
 
                         destination = new Location(world, candidateX + 0.5, groundY + 1.0, candidateZ + 0.5,
                                 playerLocation.getYaw(), playerLocation.getPitch());
