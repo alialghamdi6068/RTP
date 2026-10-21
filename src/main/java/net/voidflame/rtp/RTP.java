@@ -340,8 +340,12 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void startCountdown(Player player, World world) {
         UUID id = player.getUniqueId();
-        int seconds = Math.max(1, worldInt(world, "countdown-seconds",
-                getConfig().getInt("countdown-seconds", 5)));
+        int seconds = Math.max(0, worldInt(world, "countdown-seconds",
+                getConfig().getInt("countdown-seconds", 0)));
+        if (seconds == 0) {
+            startTeleportSearch(player, world);
+            return;
+        }
         player.sendMessage(message("countdown-start").replace("%time%", String.valueOf(seconds)));
         player.sendActionBar(Component.text("Random teleport in " + seconds + "s"));
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
@@ -435,16 +439,17 @@ public final class RTP extends JavaPlugin implements Listener {
             if (finishSearch(playerId, searchToken)) sendRtpMessage(player, "timeout");
         }, timeoutSeconds * 20L));
         int maxActiveSearches = Math.max(1, Math.min(500, getConfig().getInt("maximum-active-searches", 25)));
-        if (searches.size() > maxActiveSearches) {
+        if (searches.size() >= maxActiveSearches) {
             finishSearch(playerId, searchToken);
             sendRtpMessage(player, "busy");
             return;
         }
         sendRtpMessage(player, "searching");
 
-        int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100)));
-        int maxRadius = Math.max(minRadius + 1, worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)));
-        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 30))));
+        int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000)));
+        int maxRadius = Math.max(minRadius + 1, Math.min(50_000,
+                worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50_000))));
+        int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 200))));
         Location spawn = world.getSpawnLocation();
         int centerX = spawn.getBlockX();
         int centerZ = spawn.getBlockZ();
@@ -633,7 +638,7 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&a✦ &fOpen world controls"));
         inventory.setItem(13, guiItem(Material.CLOCK, "&f&lGLOBAL SETTINGS",
                 "&8&m━━━━━━━━━━━━━━━━━━━━",
-                "&7Countdown: &f" + getConfig().getInt("countdown-seconds", 5) + "s",
+                "&7Teleport mode: &a" + (getConfig().getInt("countdown-seconds", 0) == 0 ? "Instant" : getConfig().getInt("countdown-seconds", 0) + "s countdown"),
                 "&7Cooldown: &f" + getConfig().getInt("cooldown-seconds", 30) + "s",
                 "&7Search attempts: &f" + getConfig().getInt("maximum-attempts", 30),
                 "&7Chunk loading: " + (getConfig().getBoolean("load-chunks", false) ? "&aEnabled" : "&cDisabled"),
@@ -672,9 +677,9 @@ public final class RTP extends JavaPlugin implements Listener {
                 "&c−1 second per click"));
         inventory.setItem(12, guiItem(Material.CLOCK, "&f&lCOUNTDOWN",
                 "&8&m--------------------",
-                "&7Current value: &f" + getConfig().getInt("countdown-seconds", 5) + " seconds",
-                "&7Allowed range: &f1–60 seconds",
-                "&8Time before teleport begins."));
+                "&7Current value: &f" + (getConfig().getInt("countdown-seconds", 0) == 0 ? "Instant" : getConfig().getInt("countdown-seconds", 0) + " seconds"),
+                "&7Allowed range: &f0–60 seconds",
+                "&8Zero means teleport immediately."));
         inventory.setItem(14, guiItem(Material.LIME_DYE, "&a&lINCREASE COUNTDOWN",
                 "&7Lengthen the pre-teleport countdown.",
                 "&a+1 second per click"));
@@ -767,7 +772,7 @@ public final class RTP extends JavaPlugin implements Listener {
         }
         int value = getConfig().getInt(path);
         int min = switch (path) {
-            case "countdown-seconds" -> 1;
+            case "countdown-seconds" -> 0;
             case "cooldown-seconds" -> 0;
             case "maximum-attempts", "maximum-active-searches" -> 1;
             case "search-timeout-seconds" -> 5;
@@ -1209,10 +1214,10 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("menu.close-slot", 22);
         }
 
-        int countdown = getConfig().getInt("countdown-seconds", 5);
-        if (countdown < 1 || countdown > 60) {
-            getLogger().warning("countdown-seconds must be between 1 and 60; using 5.");
-            getConfig().set("countdown-seconds", 5);
+        int countdown = getConfig().getInt("countdown-seconds", 0);
+        if (countdown < 0 || countdown > 60) {
+            getLogger().warning("countdown-seconds must be between 0 and 60; using 0 (instant teleport).");
+            getConfig().set("countdown-seconds", 0);
         }
 
         long cooldown = getConfig().getLong("cooldown-seconds", 30);
@@ -1268,10 +1273,10 @@ public final class RTP extends JavaPlugin implements Listener {
                 }
 
                 int worldCountdown = getConfig().getInt(base + "countdown-seconds",
-                        getConfig().getInt("countdown-seconds", 5));
-                if (worldCountdown < 1 || worldCountdown > 60) {
+                        getConfig().getInt("countdown-seconds", 0));
+                if (worldCountdown < 0 || worldCountdown > 60) {
                     getLogger().warning("Invalid countdown-seconds for world '" + worldName + "'; using global value.");
-                    getConfig().set(base + "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
+                    getConfig().set(base + "countdown-seconds", getConfig().getInt("countdown-seconds", 0));
                 }
                 long worldCooldown = getConfig().getLong(base + "cooldown-seconds",
                         getConfig().getLong("cooldown-seconds", 30));
