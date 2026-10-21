@@ -504,7 +504,7 @@ public final class RTP extends JavaPlugin implements Listener {
         }
 
         int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000)));
-        int maxRadius = Math.max(minRadius + 1, Math.min(50_000,
+        int maxRadius = Math.max(minRadius + 1, Math.min(30_000_000,
                 worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50_000))));
         int attempts = Math.max(1, Math.min(200, worldInt(world, "maximum-attempts", getConfig().getInt("maximum-attempts", 200))));
         Location spawn = world.getSpawnLocation();
