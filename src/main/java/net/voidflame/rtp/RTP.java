@@ -818,7 +818,7 @@ public final class RTP extends JavaPlugin implements Listener {
             }
             case 22 -> {
                 int menuSize = getConfig().getInt("menu.size", 27);
-                int[] positions = menuSize == 27 ? new int[]{18, 22, 26} : new int[]{45, 49, 53};
+                int[] positions = menuSize == 27 ? new int[]{20, 22, 24} : new int[]{46, 49, 52};
                 int current = getConfig().getInt("menu.close-slot", positions[1]);
                 int index = 0;
                 for (int i = 0; i < positions.length; i++) if (positions[i] == current) index = i;
