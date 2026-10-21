@@ -307,32 +307,19 @@ public final class RTP extends JavaPlugin implements Listener {
             if (worldIndex >= selectable.size()) break;
             World world = selectable.get(worldIndex);
             String name = switch (world.getEnvironment()) {
-                case NETHER -> "Nether";
-                case THE_END -> "The End";
-                default -> world.getName().equalsIgnoreCase("world") ? "Overworld" : world.getName();
+                case NETHER -> "NETHER";
+                case THE_END -> "THE END";
+                default -> world.getName().equalsIgnoreCase("world") ? "OVERWORLD" : world.getName().toUpperCase(java.util.Locale.ROOT);
             };
             Material icon = switch (world.getEnvironment()) {
                 case NETHER -> Material.NETHERRACK;
                 case THE_END -> Material.END_STONE;
                 default -> Material.GRASS_BLOCK;
             };
-            int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
-            int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
-            long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
-            String accent = switch (world.getEnvironment()) {
-                case NETHER -> "&5&l";
-                case THE_END -> "&b&l";
-                default -> "&d&l";
-            };
-            inventory.setItem(slots.get(i), guiItem(icon, accent + name,
-                    "&7Click to randomly teleport",
+            inventory.setItem(slots.get(i), guiItem(icon, "&f&l" + name,
+                    "&7Randomly teleport to this dimension.",
                     "",
-                    "&8&m--------------------",
-                    "&7Players online: &b&l" + world.getPlayers().size(),
-                    "&7Teleport range: &d" + minRadius + " &8- &d" + maxRadius,
-                    "&7Cooldown: &b" + cooldown + "s",
-                    "",
-                    "&d&lVOIDFLAME &8• &fRandom Teleport"));
+                    "&a➜ Click to teleport"));
         }
 
         int closeSlot = Math.max(0, Math.min(menuSize - 1, getConfig().getInt("menu.close-slot", 22)));
@@ -455,7 +442,6 @@ public final class RTP extends JavaPlugin implements Listener {
             sendRtpMessage(player, "busy");
             return;
         }
-        sendRtpMessage(player, "searching");
 
         int minRadius = Math.max(0, worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000)));
         int maxRadius = Math.max(minRadius + 1, Math.min(50_000,
@@ -611,13 +597,7 @@ public final class RTP extends JavaPlugin implements Listener {
                             cooldowns.put(playerId, System.currentTimeMillis());
                             saveCooldowns();
                         }
-                        player.sendActionBar(Component.text("Teleported successfully"));
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 1.0f);
-                        player.sendMessage(message("success")
-                                .replace("%x%", String.valueOf(destination.getBlockX()))
-                                .replace("%y%", String.valueOf(destination.getBlockY()))
-                                .replace("%z%", String.valueOf(destination.getBlockZ()))
-                                .replace("%world%", world.getName()));
                     }));
         } catch (RuntimeException exception) {
             getLogger().fine("Skipping unsafe RTP candidate at " + x + ", " + z + ": " + exception.getMessage());
