@@ -84,10 +84,6 @@ public final class RTP extends JavaPlugin implements Listener {
                 getConfig().set("maximum-radius", 50000);
                 changed = true;
             }
-            if (!getConfig().getBoolean("load-chunks", true)) {
-                getConfig().set("load-chunks", true);
-                changed = true;
-            }
             String menuTitle = getConfig().getString("menu.title", "");
             if ("&8&lRTP".equals(menuTitle) || "&8&lRandom Teleport".equals(menuTitle)) {
                 getConfig().set("menu.title", "&8&lRANDOM TELEPORT");
@@ -1321,9 +1317,9 @@ public final class RTP extends JavaPlugin implements Listener {
                     (enabled ? "&a&lENABLED &8» &f" : "&c&lDISABLED &8» &f") + world.getName(),
                     "&8&m--------------------",
                     "&7Environment: &f" + world.getEnvironment().name(),
-                    "&7Radius: &f" + worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100))
-                            + "–" + worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000)),
-                    "&7Countdown: &f" + worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + "s",
+                    "&7Radius: &f" + worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000))
+                            + "–" + worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50000)),
+                    "&7Countdown: &f" + worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 0)) + "s",
                     "",
                     "&6▶ Click to edit this world"));
         }
@@ -1338,11 +1334,11 @@ public final class RTP extends JavaPlugin implements Listener {
         String title = GUI_WORLD_SETTINGS_PREFIX + world.getName();
         Inventory inventory = Bukkit.createInventory(null, 54, title);
         
-        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
-        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
+        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000));
+        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50000));
         int minY = worldInt(world, "minimum-y", world.getMinHeight());
         int maxY = worldInt(world, "maximum-y", world.getMaxHeight() - 2);
-        int countdown = worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5));
+        int countdown = worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 0));
         long cooldown = worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30));
         boolean enabled = isWorldRtpEnabled(world)
                 && !getConfig().getStringList("disabled-worlds").contains(world.getName());
@@ -1467,8 +1463,8 @@ public final class RTP extends JavaPlugin implements Listener {
 
     private void adjustWorldSetting(Player player, World world, int slot) {
         String base = "world-settings." + world.getName() + ".";
-        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 100));
-        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 5000));
+        int minRadius = worldInt(world, "minimum-radius", getConfig().getInt("minimum-radius", 1000));
+        int maxRadius = worldInt(world, "maximum-radius", getConfig().getInt("maximum-radius", 50000));
         int minY = worldInt(world, "minimum-y", world.getMinHeight());
         int maxY = worldInt(world, "maximum-y", world.getMaxHeight() - 2);
         switch (slot) {
@@ -1477,7 +1473,7 @@ public final class RTP extends JavaPlugin implements Listener {
             case 14 -> getConfig().set(base + "maximum-radius", Math.max(minRadius + 1, maxRadius - 500));
             case 16 -> getConfig().set(base + "maximum-radius", Math.min(30_000_000, maxRadius + 500));
             case 19 -> getConfig().set(base + "countdown-seconds", Math.max(0, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 0)) - 1));
-            case 21 -> getConfig().set(base + "countdown-seconds", Math.min(60, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 5)) + 1));
+            case 21 -> getConfig().set(base + "countdown-seconds", Math.min(60, worldInt(world, "countdown-seconds", getConfig().getInt("countdown-seconds", 0)) + 1));
             case 23 -> getConfig().set(base + "cooldown-seconds", Math.max(0, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) - 5));
             case 25 -> getConfig().set(base + "cooldown-seconds", Math.min(86400, worldLong(world, "cooldown-seconds", getConfig().getLong("cooldown-seconds", 30)) + 5));
             case 28 -> getConfig().set(base + "minimum-y", Math.max(world.getMinHeight(), minY - 10));
@@ -1885,17 +1881,17 @@ public final class RTP extends JavaPlugin implements Listener {
             for (String worldName : worldSettings.getKeys(false)) {
                 String base = "world-settings." + worldName + ".";
                 int worldMinRadius = getConfig().getInt(base + "minimum-radius",
-                        getConfig().getInt("minimum-radius", 100));
+                        getConfig().getInt("minimum-radius", 1000));
                 int worldMaxRadius = getConfig().getInt(base + "maximum-radius",
-                        getConfig().getInt("maximum-radius", 5000));
+                        getConfig().getInt("maximum-radius", 50000));
                 if (worldMinRadius < 0 || worldMinRadius >= 30_000_000) {
                     getLogger().warning("Invalid minimum-radius for world '" + worldName + "'; using global value.");
-                    getConfig().set(base + "minimum-radius", getConfig().getInt("minimum-radius", 100));
+                    getConfig().set(base + "minimum-radius", getConfig().getInt("minimum-radius", 1000));
                     worldMinRadius = getConfig().getInt(base + "minimum-radius");
                 }
                 if (worldMaxRadius <= worldMinRadius || worldMaxRadius > 30_000_000) {
                     int fallbackMax = Math.min(30_000_000, Math.max(worldMinRadius + 1,
-                            getConfig().getInt("maximum-radius", 5000)));
+                            getConfig().getInt("maximum-radius", 50000)));
                     getLogger().warning("Invalid maximum-radius for world '" + worldName + "'; using " + fallbackMax + ".");
                     getConfig().set(base + "maximum-radius", fallbackMax);
                 }
