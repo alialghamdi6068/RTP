@@ -19,6 +19,10 @@ avoid-water: true
 
 # إعدادات قائمة اختيار العالم
 # الأحجام المدعومة هي 27 أو 54 خانة، وتُستخدم الصفحات تلقائيًا عند الحاجة.
+# Admin control-center title; independent from the player-facing RTP menu.
+admin-menu:
+  title: "&5&lRTP Control Center"
+
 menu:
   title: "&8&lRANDOM TELEPORT"
   size: 27
