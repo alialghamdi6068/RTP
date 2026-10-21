@@ -122,17 +122,28 @@ public final class RTP extends JavaPlugin implements Listener {
             sender.sendMessage(message("reloaded"));
             return true;
         }
-        if (args.length == 1 && (args[0].equalsIgnoreCase("gui") || args[0].equalsIgnoreCase("worlds"))) {
+        if (args.length == 1 && args[0].equalsIgnoreCase("gui")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(message("players-only"));
+                return true;
+            }
+            if (!player.hasPermission("rtp.use")) {
+                player.sendMessage(message("no-permission"));
+                return true;
+            }
+            openPlayerGui(player);
+            return true;
+        }
+        if (args.length == 1 && args[0].equalsIgnoreCase("worlds")) {
+            if (!sender.hasPermission("rtp.admin")) {
+                sender.sendMessage(message("no-permission"));
+                return true;
+            }
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(message("admin-gui-players-only"));
                 return true;
             }
-            if (!player.hasPermission("rtp.admin")) {
-                player.sendMessage(message("no-permission"));
-                return true;
-            }
-            if (args[0].equalsIgnoreCase("worlds")) openWorldGui(player, 0);
-            else openMainGui(player);
+            openWorldGui(player, 0);
             return true;
         }
         if (args.length > 1) {
@@ -148,7 +159,7 @@ public final class RTP extends JavaPlugin implements Listener {
             return true;
         }
         if (args.length == 0) {
-            openPlayerGui(player);
+            requestTeleport(player, player.getWorld());
             return true;
         }
         World selectedWorld = Bukkit.getWorld(args[0]);
@@ -1226,19 +1237,29 @@ public final class RTP extends JavaPlugin implements Listener {
             getConfig().set("cooldown-seconds", 30);
         }
 
-        int attempts = getConfig().getInt("maximum-attempts", 30);
+        int attempts = getConfig().getInt("maximum-attempts", 200);
         if (attempts < 1 || attempts > 200) {
-            getLogger().warning("maximum-attempts must be between 1 and 200; using 30.");
-            getConfig().set("maximum-attempts", 30);
+            getLogger().warning("maximum-attempts must be between 1 and 200; using 200.");
+            getConfig().set("maximum-attempts", 200);
         }
 
-        int minRadius = getConfig().getInt("minimum-radius", 100);
-        int maxRadius = getConfig().getInt("maximum-radius", 5000);
-        if (minRadius < 0 || minRadius > 30_000_000 || maxRadius <= minRadius || maxRadius > 30_000_000) {
-            getLogger().warning("Invalid RTP radius values; restoring minimum-radius=100 and maximum-radius=5000.");
-            getConfig().set("minimum-radius", 100);
-            getConfig().set("maximum-radius", 5000);
+        int minRadius = getConfig().getInt("minimum-radius", 1000);
+        int maxRadius = getConfig().getInt("maximum-radius", 50000);
+        // Migrate the previous bundled defaults while preserving deliberate custom values.
+        if (minRadius == 100 && maxRadius == 5000) {
+            minRadius = 1000;
+            maxRadius = 50000;
+            getConfig().set("minimum-radius", minRadius);
+            getConfig().set("maximum-radius", maxRadius);
         }
+        if (minRadius < 0 || minRadius > 30_000_000 || maxRadius <= minRadius || maxRadius > 30_000_000) {
+            getLogger().warning("Invalid RTP radius values; restoring minimum-radius=1000 and maximum-radius=50000.");
+            getConfig().set("minimum-radius", 1000);
+            getConfig().set("maximum-radius", 50000);
+        }
+        if (getConfig().getInt("countdown-seconds", 5) == 5) getConfig().set("countdown-seconds", 0);
+        if (getConfig().getInt("maximum-attempts", 30) == 30) getConfig().set("maximum-attempts", 200);
+        if (!getConfig().getBoolean("load-chunks", true)) getConfig().set("load-chunks", true);
 
         int maxSearches = getConfig().getInt("maximum-active-searches", 25);
         if (maxSearches < 1 || maxSearches > 500) {
